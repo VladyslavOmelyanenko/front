@@ -1,0 +1,62 @@
+---
+const { post } = Astro.props;
+console.log(post);
+
+const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+function truncateSmart(text, limit = 100) {
+  if (!text || text.length <= limit) return text;
+
+  // Define punctuation marks we care about
+  const punctuation = /[.,!?;:]/g;
+
+  // Find the last punctuation mark before the limit
+  let lastPunc = -1;
+  let match;
+  while ((match = punctuation.exec(text)) !== null) {
+    if (match.index < limit) lastPunc = match.index;
+    else break;
+  }
+
+  // If we found punctuation close to the limit (say, within 15 chars before)
+  if (lastPunc > limit - 15) {
+    return text.slice(0, lastPunc + 1) + " ...";
+  }
+
+  // Otherwise, fall back to last space before limit
+  const lastSpace = text.lastIndexOf(" ", limit);
+  return (
+    (lastSpace === -1 ? text.slice(0, limit) : text.slice(0, lastSpace)) + "..."
+  );
+}
+
+const shortenedDescription = truncateSmart(post.postDescription, 100);
+---
+
+<div class="post-preview">
+  <div class="title-bar">
+    <h2>{post.title}</h2>
+    <p>{postDate}</p>
+  </div>
+  <img src={post.postImage.asset.url} />
+  <p class="post-description">{shortenedDescription}</p>
+</div>
+
+<style lang="scss">
+  .post-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    img {
+      width: 100%;
+    }
+    .title-bar {
+      display: flex;
+      justify-content: space-between;
+    }
+  }
+</style>

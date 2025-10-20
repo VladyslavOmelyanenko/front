@@ -1,0 +1,16 @@
+---
+import Nav from "../components/Nav.astro";
+import Layout from "../layouts/Layout.astro";
+import Feed from "../components/Feed.astro";
+import PostPreview from "../components/PostPreview.astro";
+
+import { getWorks } from "../data/works";
+const works = await getWorks();
+---
+
+<Layout title="Dzastins’ website—Work">
+    <Nav />
+    <Feed type="work">
+        {works.map((post) => <PostPreview post={post}/>)}
+    </Feed>
+</Layout>

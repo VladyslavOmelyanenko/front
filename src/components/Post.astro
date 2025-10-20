@@ -1,0 +1,25 @@
+---
+import { PortableText } from "astro-portabletext";
+
+const { post } = Astro.props;
+
+const customComponents = {
+  type: {
+    image: ({ value }) => {
+      return `<img src="${value.asset.url}" alt="${value.alt || ""}" />`;
+    },
+  },
+};
+---
+
+<div>
+  <h1>{post.title}</h1>
+
+  {
+    post.content && (
+      <div>
+        <PortableText value={post.content} components={customComponents} />
+      </div>
+    )
+  }
+</div>

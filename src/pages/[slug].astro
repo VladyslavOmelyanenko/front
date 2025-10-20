@@ -1,0 +1,36 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Feed from "../components/Feed.astro";
+import { getWorks, getWorkPost } from "../data/works";
+import Post from "../components/Post.astro";
+
+export async function getStaticPaths() {
+  const works = await getWorks();
+  console.log(works);
+
+  return works
+    .filter((post) => post.slug)
+    .map((post) => ({
+      params: { slug: post.slug },
+      props: {
+        postSlug: post.slug,
+      },
+    }));
+}
+
+const { postSlug } = Astro.props;
+const post = await getWorkPost(postSlug);
+console.log(post);
+
+if (!post) {
+  return Astro.redirect("/404");
+}
+---
+
+<Layout title={`Dzastin’s’—${post.title}`}>
+  <Nav />
+  <Feed>
+    <Post post={post} />
+  </Feed>
+</Layout>

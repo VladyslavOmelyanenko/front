@@ -1,0 +1,16 @@
+---
+const { type } = Astro.props;
+---
+
+<div class="feed">
+  <slot />
+</div>
+
+<style>
+  .feed {
+    padding-top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+  }
+</style>
