@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@astrojs/react": "^4.3.0",
+    "@portabletext/to-html": "^3.0.0",
     "@sanity/astro": "^3.2.10",
     "@sanity/client": "^7.11.0",
     "@types/react": "^19.1.12",
