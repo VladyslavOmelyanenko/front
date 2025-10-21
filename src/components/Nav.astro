@@ -1,28 +1,57 @@
-<ul class="nav-bar">
-    <li><a href="/works">Works</a></li>
-    <li><a href="/about">About</a></li>
-    <li><a href="/blog">Blog</a></li>
-    <li><a href="/archive">Archive</a></li>
+<ul class="nav-bar" id="navBar">
+  <li><a href="/works">Works</a></li>
+  <li><a href="/about">About</a></li>
+  <li><a href="/blog">Blog</a></li>
+  <li><a href="/archive">Archive</a></li>
 </ul>
 
 <style>
-    .nav-bar {
-        display: flex;
-        list-style: none;
-        width: 30%;
-        justify-content: space-around;
-        margin-top: 30px;
-        position: fixed;
-    }
+  .nav-bar {
+    display: flex;
+    list-style: none;
+    width: 30%;
+    justify-content: space-around;
+    top: 30px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    margin: auto;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+    z-index: 1000;
+  }
 
-    .nav-bar li {
-        border: 1px solid lightgray;
-        padding: 5px 10px;
-        border-radius: 5px;
-        width: 75px;
-        text-align: center;
-        background: white;
-    }
-    
+  .nav-bar.hidden {
+    transform: translateY(-300%);
+    opacity: 0;
+  }
+
+  .nav-bar li {
+    border: 1px solid lightgray;
+    padding: 5px 10px;
+    border-radius: 5px;
+    width: 75px;
+    text-align: center;
+    background: white;
+  }
 </style>
 
+<script>
+  let lastScrollY = window.scrollY;
+  const nav = document.getElementById("navBar");
+
+  window.addEventListener("scroll", () => {
+    const currentScrollY = window.scrollY;
+
+    if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      // scrolling down
+      nav.classList.add("hidden");
+    } else {
+      // scrolling up
+      nav.classList.remove("hidden");
+    }
+
+    lastScrollY = currentScrollY;
+  });
+</script>
