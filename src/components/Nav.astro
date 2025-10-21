@@ -1,8 +1,20 @@
-<ul class="nav-bar" id="navBar">
-  <li><a href="/works">Works</a></li>
-  <li><a href="/about">About</a></li>
-  <li><a href="/blog">Blog</a></li>
-  <li><a href="/archive">Archive</a></li>
+---
+const currentPath = Astro.url.pathname;
+---
+
+<ul class="nav-bar">
+  <li class={currentPath === "/works" ? "active" : ""}>
+    <a href="/works">Works</a>
+  </li>
+  <li class={currentPath === "/about" ? "active" : ""}>
+    <a href="/about">About</a>
+  </li>
+  <li class={currentPath === "/blog" ? "active" : ""}>
+    <a href="/blog">Blog</a>
+  </li>
+  <li class={currentPath === "/archive" ? "active" : ""}>
+    <a href="/archive">Archive</a>
+  </li>
 </ul>
 
 <style>
@@ -35,6 +47,10 @@
     text-align: center;
     background: white;
   }
+
+  .nav-bar li.active {
+    border-color: black;
+  }
 </style>
 
 <script>
@@ -44,7 +60,7 @@
   window.addEventListener("scroll", () => {
     const currentScrollY = window.scrollY;
 
-    if (currentScrollY > lastScrollY && currentScrollY > 100) {
+    if (currentScrollY > lastScrollY && currentScrollY > 60) {
       // scrolling down
       nav.classList.add("hidden");
     } else {

@@ -1,10 +1,26 @@
 ---
-import Nav from '../components/Nav.astro';
-import Layout from '../layouts/Layout.astro';
-import Feed from '../components/Feed.astro'
+import Nav from "../components/Nav.astro";
+import Layout from "../layouts/Layout.astro";
+import Feed from "../components/Feed.astro";
+import PostPreview from "../components/PostPreview.astro";
+
+import { getPosts } from "../data/works";
+const blogPosts = await getPosts("blog", "selectedBlogPosts");
 ---
 
 <Layout title="Dzastins’ website—Blog">
-	<Nav></Nav>
-    <Feed type="blog">Blog</Feed>
+  <Nav />
+  <Feed type="blog">
+    {
+      blogPosts.length == 0 ? (
+        <p>Blog is currently empty… come back later</p>
+      ) : (
+        blogPosts.map((post) => (
+          <a href={`/${post.slug}`}>
+            <PostPreview post={post} />
+          </a>
+        ))
+      )
+    }
+  </Feed>
 </Layout>

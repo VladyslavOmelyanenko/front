@@ -29,7 +29,12 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   }
   :global(.post-content img) {
     width: 100%;
-    margin: 20px 0;
+    margin: 8px 0;
+    border-radius: 4px;
+  }
+  :global(.post-content p) {
+    white-space: pre-wrap;
+    min-height: 16px;
   }
   :global(.post-content strong) {
     font-weight: normal;

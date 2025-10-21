@@ -1,27 +1,28 @@
 import { client } from "../lib/sanity.js";
 
-export async function getWorks() {
+
+export async function getPosts(type, field) {
   try {
-    const works = await client.fetch(`
-      *[_type == "works"][0].selectedPosts[]->{
+    const posts = await client.fetch(
+      `*[_type == $type][0].${field}[]->{
         title,
         "slug": slug.current,
         postDate,
-        postImage{
-          asset
-        },
+        postImage{ asset },
         postDescription
-      }
-    `);
+      } | order(postDate desc)`, // 👈 sorts newest → oldest
+      { type }
+    );
 
-    if (!works) {
-      throw new Error("No projects found");
+    if (!posts || posts.length === 0) {
+      console.warn(`No posts found for type: ${type}`);
+      return [];
     }
 
-    return works;
+    return posts;
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
-    throw new Error("Failed to fetch projects");
+    console.error(`Failed to fetch ${type} posts:`, error);
+    throw new Error(`Failed to fetch ${type} posts`);
   }
 }
 
@@ -47,9 +48,35 @@ export async function getWorkPost(slug) {
     );
 
     return post ?? null;
-
   } catch (error) {
     console.error("Failed to fetch project:", error);
+    return null;
+  }
+}
+
+
+export async function getAboutPost() {
+  try {
+    const data = await client.fetch(`
+      *[_type == "about"][0]{
+        aboutPost->{
+          title,
+          "slug": slug.current,
+          postDate,
+          postImage{asset},
+          postDescription,
+          content[]{
+            ...,
+            _type == "image" => { ... } // keep as-is if you rely on asset._ref
+          }
+        }
+      }
+    `);
+
+    // Return the referenced post (or null if missing)
+    return data?.aboutPost ?? null;
+  } catch (err) {
+    console.error("Failed to fetch about post:", err);
     return null;
   }
 }

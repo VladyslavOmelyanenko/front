@@ -4,8 +4,8 @@ import Layout from "../layouts/Layout.astro";
 import Feed from "../components/Feed.astro";
 import PostPreview from "../components/PostPreview.astro";
 
-import { getWorks } from "../data/works";
-const works = await getWorks();
+import { getPosts } from "../data/works";
+const works = await getPosts("works", "selectedWorkPosts");
 ---
 
 <Layout title="Dzastins’ website—Work">

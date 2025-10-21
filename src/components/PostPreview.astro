@@ -2,48 +2,49 @@
 import { urlFor } from "../lib/sanity.js";
 const { post } = Astro.props;
 
-const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
+const postDate =
+  post?.postDate &&
+  new Date(post.postDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
 function truncateSmart(text, limit = 100) {
-  if (!text || text.length <= limit) return text;
-
-  // Define punctuation marks we care about
+  if (!text || text.length <= limit) return text || "";
   const punctuation = /[.,!?;:]/g;
-
-  // Find the last punctuation mark before the limit
   let lastPunc = -1;
   let match;
   while ((match = punctuation.exec(text)) !== null) {
     if (match.index < limit) lastPunc = match.index;
     else break;
   }
-
-  // If we found punctuation close to the limit (say, within 15 chars before)
-  if (lastPunc > limit - 15) {
-    return text.slice(0, lastPunc + 1) + " ...";
-  }
-
-  // Otherwise, fall back to last space before limit
+  if (lastPunc > limit - 15) return text.slice(0, lastPunc + 1) + " ...";
   const lastSpace = text.lastIndexOf(" ", limit);
   return (
     (lastSpace === -1 ? text.slice(0, limit) : text.slice(0, lastSpace)) + "..."
   );
 }
 
-const shortenedDescription = truncateSmart(post.postDescription, 100);
+const desc = truncateSmart(post?.postDescription, 100);
+const imgUrl =
+  post?.postImage?.asset &&
+  urlFor(post.postImage.asset).width(800).auto("format").url();
 ---
 
 <div class="post-preview">
   <div class="title-bar">
-    <h2>{post.title}</h2>
-    <p>{postDate}</p>
+    <h2>{post?.title || "Untitled Post"}</h2>
+    {postDate && <p>{postDate}</p>}
   </div>
-  <img src={urlFor(post.postImage.asset).url()} />
-  <p class="post-description">{shortenedDescription}</p>
+
+  {
+    imgUrl && (
+      <img src={imgUrl} alt={post?.title || "Post image"} loading="lazy" />
+    )
+  }
+
+  {desc && <p class="post-description">{desc}</p>}
 </div>
 
 <style lang="scss">
@@ -51,12 +52,17 @@ const shortenedDescription = truncateSmart(post.postDescription, 100);
     display: flex;
     flex-direction: column;
     gap: 10px;
+
     img {
       width: 100%;
+      border-radius: 4px;
+      object-fit: cover;
     }
+
     .title-bar {
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
   }
 </style>

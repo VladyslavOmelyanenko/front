@@ -1,11 +1,17 @@
 ---
-import Nav from '../components/Nav.astro';
-import Feed from '../components/Feed.astro'
-import Layout from '../layouts/Layout.astro';
+import Nav from "../components/Nav.astro";
+import Feed from "../components/Feed.astro";
+import Layout from "../layouts/Layout.astro";
+import Post from "../components/Post.astro";
+import { getAboutPost } from "../data/works.js";
 
+const aboutPost = await getAboutPost();
+console.log("aboutPost:", aboutPost);
 ---
 
 <Layout title="Dzastins’ website—About">
-	<Nav></Nav>
-    <Feed type="about">About</Feed>
+  <Nav />
+  <Feed type="about">
+    <Post post={aboutPost} />
+  </Feed>
 </Layout>
