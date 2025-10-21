@@ -9,8 +9,14 @@ const works = await getWorks();
 ---
 
 <Layout title="Dzastins’ website—Work">
-    <Nav />
-    <Feed type="work">
-        {works.map((post) => <PostPreview post={post}/>)}
-    </Feed>
+  <Nav />
+  <Feed type="work">
+    {
+      works.map((post) => (
+        <a href={`/${post.slug}`}>
+          <PostPreview post={post} />
+        </a>
+      ))
+    }
+  </Feed>
 </Layout>

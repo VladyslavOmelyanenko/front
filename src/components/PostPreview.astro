@@ -1,6 +1,6 @@
 ---
+import { urlFor } from "../lib/sanity.js";
 const { post } = Astro.props;
-console.log(post);
 
 const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   year: "numeric",
@@ -42,7 +42,7 @@ const shortenedDescription = truncateSmart(post.postDescription, 100);
     <h2>{post.title}</h2>
     <p>{postDate}</p>
   </div>
-  <img src={post.postImage.asset.url} />
+  <img src={urlFor(post.postImage.asset).url()} />
   <p class="post-description">{shortenedDescription}</p>
 </div>
 

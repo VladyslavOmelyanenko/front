@@ -8,10 +8,7 @@ export async function getWorks() {
         "slug": slug.current,
         postDate,
         postImage{
-          asset->{
-            _id,
-            url,
-          }
+          asset
         },
         postDescription
       }
@@ -32,35 +29,24 @@ export async function getWorkPost(slug) {
   try {
     const post = await client.fetch(
       `*[_type == "post" && slug.current == $slug][0]{
-          title,
-        slug,
+        title,
+        "slug": slug.current,
         postDate,
         postImage{
-          asset->{
-            _id,
-            url,
-          }
+          asset
         },
         postDescription,
         content[]{
           ...,
           _type == "image" => {
             ...,
-            asset->{
-              _id,
-              url
-            }
           }
         }
       }`,
       { slug }
     );
 
-    if (!post) {
-      return null;
-    }
-
-    return post;
+    return post ?? null;
 
   } catch (error) {
     console.error("Failed to fetch project:", error);

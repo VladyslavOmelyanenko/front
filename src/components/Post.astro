@@ -1,25 +1,38 @@
 ---
-import { PortableText } from "astro-portabletext";
+import PostContent from "../components/PostContent.jsx";
 
 const { post } = Astro.props;
 
-const customComponents = {
-  type: {
-    image: ({ value }) => {
-      return `<img src="${value.asset.url}" alt="${value.alt || ""}" />`;
-    },
-  },
-};
+const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
 ---
 
 <div>
-  <h1>{post.title}</h1>
-
-  {
-    post.content && (
-      <div>
-        {/* <PortableText value={post.content} components={customComponents} /> */}
-      </div>
-    )
-  }
+  <div class="title-bar">
+    <h2>{post.title}</h2>
+    <p>{postDate}</p>
+  </div>
+  <div class="post-content">
+    <PostContent post={post} client:load />
+  </div>
 </div>
+
+<style lang="scss">
+  .title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  :global(.post-content img) {
+    width: 100%;
+    margin: 20px 0;
+  }
+  :global(.post-content strong) {
+    font-weight: normal;
+    font-size: 32px;
+  }
+</style>

@@ -1,0 +1,21 @@
+---
+import { urlFor } from "../lib/sanity.js";
+
+// PortableText passes the block as `value`
+const { value } = Astro.props;
+
+// Work with either a referenced asset (_ref) or a deref’d asset (_id)
+const ref = value?.asset?._ref ?? value?.asset?._id ?? null;
+
+// If we only have _id, reconstruct a ref-like source for the builder
+const source = value?.asset?._ref
+  ? value
+  : ref
+    ? { ...value, asset: { _ref: ref } }
+    : null;
+
+const src = source ? urlFor(source).width(1200).auto("format").url() : "";
+const alt = value?.alt || value?.caption || "";
+---
+
+{src && <img src={src} alt={alt} loading="lazy" />}
