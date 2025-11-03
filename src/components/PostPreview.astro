@@ -38,11 +38,11 @@ const imgUrl =
     {postDate && <p>{postDate}</p>}
   </div>
 
-  <!-- {
+  {
     imgUrl && (
       <img src={imgUrl} alt={post?.title || "Post image"} loading="lazy" />
     )
-  } -->
+  }
 
   {desc && <p class="post-description">{desc}</p>}
 </div>
@@ -54,7 +54,7 @@ const imgUrl =
     gap: 10px;
 
     img {
-      width: 60%;
+      width: 50%;
       border-radius: 4px;
       object-fit: cover;
       align-self: center;
