@@ -1,5 +1,4 @@
 ---
-import Nav from "../components/Nav.astro";
 import Feed from "../components/Feed.astro";
 import Layout from "../layouts/Layout.astro";
 import Post from "../components/Post.astro";
@@ -10,7 +9,6 @@ console.log("aboutPost:", aboutPost);
 ---
 
 <Layout title="Dzastins’ website—About">
-  <Nav />
   <Feed type="about">
     <Post post={aboutPost} />
   </Feed>

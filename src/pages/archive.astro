@@ -1,5 +1,4 @@
 ---
-import Nav from "../components/Nav.astro";
 import Feed from "../components/Feed.astro";
 import Layout from "../layouts/Layout.astro";
 import PostPreview from "../components/PostPreview.astro";
@@ -9,7 +8,6 @@ const archivedPosts = await getPosts("archive", "archivedPosts");
 ---
 
 <Layout title="Dzastins’ website—Archive">
-  <Nav />
   <Feed type="archive">
     {(archivedPosts.length == 0) ? <p>Archive is currently empty… come back later</p> :
       archivedPosts.map((post) => (

@@ -4,3 +4,39 @@ body {
   font-size: 16px;
   line-height: 1.2;
 }
+
+
+/* define your custom animations */
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* old view slides out to the left */
+::view-transition-old(root) {
+  animation: slide-out 0.4s ease both;
+}
+
+/* new view slides in from the right */
+::view-transition-new(root) {
+  animation: slide-in 0.4s ease both;
+}
