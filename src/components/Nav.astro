@@ -1,10 +1,13 @@
 ---
 const currentPath = Astro.url.pathname;
-const routes = ["/works", "/about", "/blog", "/archive"];
+const routes = ["/", "/works", "/about", "/blog"];
 const activeIndex = Math.max(0, routes.indexOf(currentPath)); // fallback to first
 ---
 
 <ul class="nav-bar" id="navBar" style={`--active-index:${activeIndex}`}>
+  <li class={currentPath === "/" ? "active" : ""}>
+    <a href="/">Home</a>
+  </li>
   <li class={currentPath === "/works" ? "active" : ""}>
     <a href="/works">Works</a>
   </li>
@@ -13,9 +16,6 @@ const activeIndex = Math.max(0, routes.indexOf(currentPath)); // fallback to fir
   </li>
   <li class={currentPath === "/blog" ? "active" : ""}>
     <a href="/blog">Blog</a>
-  </li>
-  <li class={currentPath === "/archive" ? "active" : ""}>
-    <a href="/archive">Archive</a>
   </li>
 
   <!-- single moving black highlight -->
