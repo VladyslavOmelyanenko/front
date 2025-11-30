@@ -1,8 +1,7 @@
 ---
-import { ClientRouter } from "astro:transitions";
 import Nav from "../components/Nav.astro";
-import "../styles/reset.css";
-import "../styles/global.css";
+import "../styles/reset.scss";
+import "../styles/global.scss";
 const { title } = Astro.props;
 ---
 
@@ -15,20 +14,19 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    <ClientRouter />
   </head>
 
   <body>
     <!-- Persist the nav across route swaps so it never re-animates or rerenders -->
-    <Nav transition:persist transition:name="nav" />
+    <Nav/>
 
     <!-- Only the main content slides -->
-    <main class="main-container" transition:animate="slide">
+    <main class="main-container">
       <slot />
     </main>
 
     <!-- Persist any other fixed UI too -->
-    <div class="copyright" transition:persist>© 2025, Dzastins Zavadzkis</div>
+    <div class="copyright">© 2025, Dzastins Zavadzkis</div>
   </body>
 </html>
 
@@ -40,13 +38,15 @@ const { title } = Astro.props;
     height: 100%;
   }
   .main-container {
-    width: 36%;
-    margin-left: 32%;
+    width: 50%;
+    margin-left: 25%;
     padding-bottom: 50px;
+    padding-top: 100px;
   }
   .copyright {
     position: fixed;
-    bottom: 50px;
-    right: 50px;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
   }
 </style>

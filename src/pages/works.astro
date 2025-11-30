@@ -1,20 +1,23 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Feed from "../components/Feed.astro";
-import PostPreview from "../components/PostPreview.astro";
+import WorkPreview from "../components/WorkPreview.astro";
 
 import { getPosts } from "../data/works";
 const works = await getPosts("works", "selectedWorkPosts");
+
+// console.log(works);
 ---
 
 <Layout title="Dzastins’ website—Work">
-  <Feed type="work">
-    {
-      works.map((post) => (
-        <a href={`/${post.slug}`}>
-          <PostPreview post={post} />
-        </a>
-      ))
-    }
-  </Feed>
+  <div class="work-feed">
+    {works.map((work) => <WorkPreview workPost={work} />)}
+  </div>
 </Layout>
+
+<style lang="scss">
+  .work-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+</style>

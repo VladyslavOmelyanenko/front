@@ -1,0 +1,145 @@
+---
+import { urlFor } from "../lib/sanity.js";
+
+const { workPost } = Astro.props;
+
+// Get *thumb URLs* from Sanity image assets
+const images = workPost.images ?? [];
+const thumbUrls = images.map(
+  (img) => urlFor(img.asset).width(200).url() // same aspect ratio, max width 200px
+);
+const initialImages = thumbUrls.slice(0, 3);
+---
+
+<a href={'/works/' + workPost.slug}>
+  <div class="work-preview" data-images={JSON.stringify(thumbUrls)}>
+    <h2 class="work-title">{workPost.title}</h2>
+
+    <p class="work-short-description">
+      <span class="ticker" data-ticker>
+        <span class="t1">{workPost.postDescription}</span>
+        <span class="t2">{workPost.postDescription}</span>
+      </span>
+    </p>
+
+    {initialImages.map((url) => <img class="work-image" src={url} />)}
+
+    <span class="work-year">
+      {new Date(workPost.postDate).getFullYear()}
+    </span>
+  </div>
+</a>
+
+<script>
+  const SPEED = 150; // pixels per second for text ticker
+  const ROTATE_INTERVAL = 300; // ms between image shifts
+
+  // 1) Ticker duration setup (same speed for all)
+  document.querySelectorAll("[data-ticker]").forEach((ticker) => {
+    const singleWidth = ticker.scrollWidth / 2; // width of one text copy
+    const duration = singleWidth / SPEED;
+    ticker.style.setProperty("--ticker-duration", `${duration}s`);
+  });
+
+  // 2) Image rotation on hover (now using thumb URLs)
+  document.querySelectorAll(".work-preview").forEach((row) => {
+    const imgs = row.querySelectorAll(".work-image");
+    const data = row.dataset.images || "[]";
+    let urls;
+
+    try {
+      urls = JSON.parse(data);
+    } catch {
+      urls = [];
+    }
+
+    if (!urls || urls.length <= imgs.length) return;
+
+    let startIndex = 0;
+    let intervalId = null;
+
+    const updateImages = () => {
+      imgs.forEach((img, i) => {
+        const idx = (startIndex + i) % urls.length;
+        img.src = urls[idx];
+      });
+    };
+
+    const startRotation = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        startIndex = (startIndex + 1) % urls.length;
+        updateImages();
+      }, ROTATE_INTERVAL);
+    };
+
+    const stopRotation = () => {
+      if (!intervalId) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+
+    row.addEventListener("mouseenter", startRotation);
+    row.addEventListener("mouseleave", stopRotation);
+  });
+</script>
+
+<style lang="scss">
+  @import "../styles/_variables.scss";
+
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .work-preview {
+    height: 42px;
+    display: flex;
+    gap: 10px;
+
+    .work-title,
+    .work-short-description,
+    .work-year {
+      border-radius: $br;
+      background-color: $gray;
+      text-align: center;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .work-short-description {
+      overflow: hidden;
+      position: relative;
+
+      .ticker {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: ticker var(--ticker-duration) linear infinite;
+        animation-play-state: paused;
+      }
+
+      .t1,
+      .t2 {
+        padding-right: 40px;
+      }
+    }
+
+    &:hover .work-short-description .ticker {
+      animation-play-state: running;
+    }
+
+    .work-image {
+      height: 100%;
+      width: auto;
+      border-radius: $br;
+      border: 1.5px solid #d9d9d9;
+      object-fit: cover;
+    }
+  }
+</style>

@@ -1,130 +1,141 @@
 ---
-const currentPath = Astro.url.pathname;
-const routes = ["/", "/works", "/about", "/blog"];
-const activeIndex = Math.max(0, routes.indexOf(currentPath)); // fallback to first
+const rawPath = Astro.url.pathname;
+
+// normalize: remove trailing slash except for root
+const currentPath = rawPath === "/" ? "/" : rawPath.replace(/\/+$/, "");
+
+const routes = ["/works", "/about", "/blog"];
+
+const activeIndex = routes.findIndex(
+  (route) => currentPath === route || currentPath.startsWith(route + "/")
+);
+
+// 👇 if we're on home ("/"), don't highlight anything
+const isHome = currentPath === "/";
+
+// -1 means "no active item"
+const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
 ---
 
-<ul class="nav-bar" id="navBar" style={`--active-index:${activeIndex}`}>
-  <li class={currentPath === "/" ? "active" : ""}>
-    <a href="/">Home</a>
-  </li>
-  <li class={currentPath === "/works" ? "active" : ""}>
+<ul class="nav-bar" id="navBar" style={`--active-index:${safeIndex}`}>
+  <li class={currentPath.startsWith("/works") ? "active" : ""}>
     <a href="/works">Works</a>
   </li>
-  <li class={currentPath === "/about" ? "active" : ""}>
+  <li class={currentPath.startsWith("/about") ? "active" : ""}>
     <a href="/about">About</a>
   </li>
-  <li class={currentPath === "/blog" ? "active" : ""}>
+  <li class={currentPath.startsWith("/blog") ? "active" : ""}>
     <a href="/blog">Blog</a>
   </li>
 
-  <!-- single moving black highlight -->
   <div class="animation"></div>
 </ul>
 
-<style>
-  /* === base layout === */
+<style lang="scss">
+  @import "../styles/_variables.scss";
+
   .nav-bar {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     list-style: none;
-    width: 30%;
-    min-width: 400px;
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    justify-content: space-around;
-    top: 30px;
-    position: fixed;
-    left: 0;
-    right: 0;
-    margin: auto;
-    transition:
-      transform 0.3s ease,
-      opacity 0.3s ease;
+    background-color: $gray;
+    border: 3px solid $gray;
+    border-radius: $br;
+    width: max-content;
+    padding: 0;
     z-index: 1000;
     overflow: hidden;
   }
 
-  .nav-bar.hidden {
-    transform: translateY(-300%);
-    opacity: 0;
-  }
-
   .nav-bar li {
-    flex: 1 1 25%;
-    text-align: center;
     position: relative;
     z-index: 1;
-    border-radius: 5px;
   }
 
   .nav-bar a {
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 0.3em 0;
-    color: rgb(255, 255, 255);
+    padding: 0 14px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
     text-decoration: none;
-    border-radius: 5px;
+    white-space: nowrap;
   }
 
-  /* === sliding highlight (GPU-accelerated) === */
-  .nav-bar .animation {
+  /* highlight */
+  .animation {
     position: absolute;
     top: 0;
-    left: 0; /* ✅ anchor the starting point */
-    width: 25%;
+    left: 0;
     height: 100%;
     background: #000;
-    border-radius: 5px;
+    border-radius: $br;
     z-index: 0;
     pointer-events: none;
-
-    transform: translate3d(calc(var(--active-index, 0) * 100%), 0, 0);
-    transition: transform 0.25s ease;
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-
-  .nav-bar li:nth-child(1):hover ~ .animation {
-    transform: translate3d(0%, 0, 0);
-  }
-  .nav-bar li:nth-child(2):hover ~ .animation {
-    transform: translate3d(100%, 0, 0);
-  }
-  .nav-bar li:nth-child(3):hover ~ .animation {
-    transform: translate3d(200%, 0, 0);
-  }
-  .nav-bar li:nth-child(4):hover ~ .animation {
-    transform: translate3d(300%, 0, 0);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .nav-bar .animation {
-      transition: none;
-    }
+    width: 0;
+    transform: translateX(0);
+    transition:
+      transform 0.25s ease,
+      width 0.25s ease;
   }
 </style>
 
 <script>
-  let lastScrollY = window.scrollY;
   const nav = document.getElementById("navBar");
+  const items = nav.querySelectorAll("li");
+  const highlight = nav.querySelector(".animation");
 
-  window.addEventListener("scroll", () => {
-    const currentScrollY = window.scrollY;
+  function moveHighlightToItem(item) {
+    const { offsetLeft, offsetWidth } = item;
+    highlight.style.transform = `translateX(${offsetLeft}px)`;
+    highlight.style.width = `${offsetWidth}px`;
+  }
 
-    if (currentScrollY > lastScrollY && currentScrollY > 60) {
-      nav.classList.add("hidden");
+  window.addEventListener("load", () => {
+    const index = Number(
+      getComputedStyle(nav).getPropertyValue("--active-index")
+    );
+
+    if (index >= 0) {
+      moveHighlightToItem(items[index]);
     } else {
-      nav.classList.remove("hidden");
+      // Home page → hide highlight
+      highlight.style.width = "0";
+      highlight.style.transform = "translateX(0)";
     }
-
-    lastScrollY = currentScrollY;
   });
 
-  // optional: remove if not needed
-  nav.querySelectorAll("a").forEach((a) => {
-    a.addEventListener("mousedown", () => {
-      document.body.style.cursor = "none";
-    });
+  items.forEach((li) => {
+    li.addEventListener("mouseenter", () => moveHighlightToItem(li));
+  });
+
+  nav.addEventListener("mouseleave", () => {
+    const index = Number(
+      getComputedStyle(nav).getPropertyValue("--active-index")
+    );
+
+    if (index >= 0) {
+      moveHighlightToItem(items[index]);
+    } else {
+      highlight.style.width = "0";
+      highlight.style.transform = "translateX(0)";
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    const index = Number(
+      getComputedStyle(nav).getPropertyValue("--active-index")
+    );
+
+    if (index >= 0) {
+      moveHighlightToItem(items[index]);
+    } else {
+      highlight.style.width = "0";
+      highlight.style.transform = "translateX(0)";
+    }
   });
 </script>

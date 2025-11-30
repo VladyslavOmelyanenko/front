@@ -1,12 +1,160 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Feed from '../components/Feed.astro'
+import { client } from "../lib/sanity.js";
+import { urlFor } from "../lib/sanity.js";
+
+import Layout from "../layouts/Layout.astro";
+
+export async function getHomepageImages() {
+  return client.fetch(`
+    *[_type == "homepage"][0]{
+      featuredImages[]{
+        asset,
+        alt
+      }
+    }
+  `);
+}
+
+const data = await getHomepageImages();
+const images = data?.featuredImages ?? [];
+
+// keep only valid assets
+const assets = images.filter((img) => img && img.asset);
+
+// build hi-res & low-res URLs on the server (Astro)
+const hiResUrls = assets.map((img) =>
+  urlFor(img.asset)
+    .width(1920) // adjust if you like
+    .height(1080)
+    .fit("max") // keep aspect ratio, no crop
+    .quality(85)
+    .url()
+);
+
+const lowResUrls = assets.map((img) =>
+  urlFor(img.asset).width(64).height(64).fit("max").quality(20).url()
+);
+
+// random start
+const initialIndex =
+  hiResUrls.length > 0 ? Math.floor(Math.random() * hiResUrls.length) : 0;
+
+const firstHi = hiResUrls[initialIndex] ?? null;
+const firstLow = lowResUrls[initialIndex] ?? null;
 ---
 
 <Layout>
-	<Feed type="home"></Feed>
+  <div
+    class="slideshow"
+    data-hi={JSON.stringify(hiResUrls)}
+    data-low={JSON.stringify(lowResUrls)}
+    data-start={initialIndex}
+  >
+    {
+      firstLow && (
+        <img
+          class="slideshow-image loading"
+          src={firstLow}
+          alt="Featured slide"
+          loading="lazy"
+        />
+      )
+    }
+  </div>
 </Layout>
 
-<style lang="scss">
+<script>
+  (function initSlideshow() {
+    const gallery = document.querySelector(".slideshow");
+    if (!gallery) return;
 
+    const img = gallery.querySelector(".slideshow-image");
+    if (!img) return;
+
+    let hi = [];
+    let low = [];
+
+    try {
+      hi = JSON.parse(gallery.dataset.hi || "[]");
+      low = JSON.parse(gallery.dataset.low || "[]");
+    } catch {
+      hi = [];
+      low = [];
+    }
+
+    if (!hi.length) return;
+
+    let index = parseInt(gallery.dataset.start, 10) || 0;
+
+    function preloadNext(nextIndex) {
+      const pre = new Image();
+      pre.src = hi[nextIndex];
+    }
+
+    function showImage(idx) {
+      const lowUrl = low[idx];
+      const hiUrl = hi[idx];
+
+      img.classList.add("loading");
+      img.style.opacity = "0";
+
+      if (lowUrl) {
+        img.src = lowUrl;
+      }
+
+      const hiImg = new Image();
+      hiImg.src = hiUrl;
+      hiImg.onload = () => {
+        img.src = hiUrl;
+        img.classList.remove("loading");
+        requestAnimationFrame(() => {
+          img.style.opacity = "1";
+        });
+      };
+
+      const nextIndex = (idx + 1) % hi.length;
+      preloadNext(nextIndex);
+    }
+
+    // show initial random slide
+    showImage(index);
+
+    // click to go next
+    gallery.addEventListener("click", () => {
+      index = (index + 1) % hi.length;
+      showImage(index);
+    });
+  })();
+</script>
+
+<style lang="scss">
+  .slideshow {
+    position: fixed;
+    inset: 0; // top:0; right:0; bottom:0; left:0
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    cursor: pointer;
+    z-index: 999;
+  }
+
+  .slideshow-image {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover; // center & cover screen
+    display: block;
+    transition:
+      opacity 0.5s ease-out,
+      filter 0.3s ease-out,
+      transform 0.3s ease-out;
+    opacity: 1;
+    will-change: opacity, filter, transform;
+  }
+
+  /* blurred low-res placeholder */
+  .slideshow-image.loading {
+    filter: blur(10px);
+    transform: scale(1.03);
+  }
 </style>

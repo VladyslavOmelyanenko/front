@@ -1,0 +1,122 @@
+---
+const { blogPost } = Astro.props;
+---
+
+<a href={'/blog/' + blogPost.slug}>
+  <div class="blog-preview">
+    <span class="blog-date">
+      {
+        (() => {
+          const d = new Date(blogPost.postDate);
+          const day = String(d.getDate()).padStart(2, "0");
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const year = d.getFullYear();
+          return `${day}.${month}.${year}`;
+        })()
+      }
+    </span>
+
+    <p class="blog-short-description">
+      <span class="ticker" data-ticker>
+        <span class="ticker-text">{blogPost.postDescription}</span>
+      </span>
+    </p>
+  </div>
+</a>
+
+<script>
+  const SPEED = 150; // pixels per second for text ticker
+
+  document.querySelectorAll("[data-ticker]").forEach((ticker) => {
+    const container = ticker.parentElement;
+    const textEl = ticker.querySelector(".ticker-text");
+    if (!textEl || !container) return;
+
+    const textWidth = textEl.scrollWidth;
+    const containerWidth = container.offsetWidth;
+
+    // If the text fits inside the box, do nothing (no scrolling)
+    if (textWidth <= containerWidth) {
+      return;
+    }
+
+    // Text is longer than the box → enable scrolling
+    // Duplicate text for seamless loop
+    const clone = textEl.cloneNode(true);
+    ticker.appendChild(clone);
+
+    // Duration based on ONE text width (we scroll that distance)
+    const duration = textWidth / SPEED; // seconds = px / (px/s)
+
+    ticker.style.setProperty("--ticker-duration", `${duration}s`);
+    ticker.classList.add("ticker--scrolling");
+  });
+</script>
+
+<style lang="scss">
+  @import "../styles/_variables.scss";
+
+  /* Move by half the width because we now have 2 equal copies inline */
+  @keyframes ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .blog-preview {
+    display: flex;
+    gap: 10px;
+    height: 42px;
+
+    .blog-title,
+    .blog-author,
+    .blog-short-description,
+    .blog-date {
+      background: $gray;
+      border-radius: $br;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    /* description: takes all remaining space */
+    .blog-short-description {
+      flex: 1 1 auto;
+      min-width: 0;
+      position: relative;
+
+      .ticker {
+        display: inline-flex;
+        white-space: nowrap;
+      }
+
+      .ticker-text {
+        padding-right: 40px; // spacing for loop
+      }
+
+      /* only scrolling tickers get animation */
+      .ticker--scrolling {
+        animation: ticker var(--ticker-duration) linear infinite;
+        animation-play-state: paused;
+      }
+    }
+
+    /* date: always fixed width */
+    .blog-date {
+      flex: 0 0 120px;
+      width: 120px;
+      justify-content: center;
+    }
+
+    /* Hover row → only scrolling tickers move */
+    &:hover .blog-short-description .ticker--scrolling {
+      animation-play-state: running;
+    }
+  }
+</style>

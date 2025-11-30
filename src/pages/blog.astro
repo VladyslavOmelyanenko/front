@@ -1,24 +1,22 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Feed from "../components/Feed.astro";
-import PostPreview from "../components/PostPreview.astro";
+import BlogPreview from "../components/BlogPreview.astro";
 
 import { getPosts } from "../data/works";
 const blogPosts = await getPosts("blog", "selectedBlogPosts");
 ---
 
 <Layout title="Dzastins’ website—Blog">
-  <Feed type="blog">
-    {
-      blogPosts.length == 0 ? (
-        <p>Blog is currently empty… come back later</p>
-      ) : (
-        blogPosts.map((post) => (
-          <a href={`/${post.slug}`}>
-            <PostPreview post={post} />
-          </a>
-        ))
-      )
-    }
-  </Feed>
+  <div class="blog-feed">
+    {blogPosts.map(blogPost => <BlogPreview blogPost={blogPost}/>)}
+  </div>
 </Layout>
+
+
+<style lang="scss">
+  .blog-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+</style>

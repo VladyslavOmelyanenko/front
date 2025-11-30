@@ -1,9 +1,9 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Feed from "../components/Feed.astro";
-import { client } from "../lib/sanity.js";
-import Post from "../components/Post.astro";
-import { getWorkPost as getPostBySlug } from "../data/works"; // rename later if you like
+import Layout from "../../layouts/Layout.astro";
+import Feed from "../../components/Feed.astro";
+import { client } from "../../lib/sanity.js";
+import Post from "../../components/Post.astro";
+import { getWorkPost as getPostBySlug } from "../../data/works"; // rename later if you like
 
 export async function getStaticPaths() {
   const slugs = await client.fetch(`

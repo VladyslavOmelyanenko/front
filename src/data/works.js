@@ -9,7 +9,13 @@ export async function getPosts(type, field) {
         "slug": slug.current,
         postDate,
         postImage{ asset },
-        postDescription
+        postDescription,
+        postAuthor,
+        "images": content[_type == "image"] {
+          _key,
+          asset,
+          alt
+        }
       } | order(postDate desc)`, // 👈 sorts newest → oldest
       { type }
     );
