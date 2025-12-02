@@ -15,8 +15,11 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     <h2>{post.title}</h2>
     <p>{postDate}</p>
   </div>
+
   <div class="post-content">
-    <PostContent post={post} client:load />
+    <div class="post-body">
+      <PostContent post={post} client:load />
+    </div>
   </div>
 </div>
 
@@ -66,7 +69,7 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     padding: 8px 8px;
   }
 
-  /* === FOOTNOTE / MARGIN NOTE STYLES === */
+  /* === SHARED FOOTNOTE STYLES === */
 
   :global(.post-content .pt-block) {
     position: relative;
@@ -75,18 +78,20 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   :global(.post-content .footnote-text) {
     color: $gray;
     text-decoration: underline;
+    cursor: pointer;
   }
 
-  :global(.post-content .footnote) {
-    position: static;
-  }
-
-  /* inline note is hidden; JS uses its textContent */
+  /* the hidden source for note HTML */
   :global(.post-content .footnote-note) {
     display: none;
   }
 
-  /* RIGHT margin layer */
+  /* inline PT in note */
+  :global(.post-content .fn-inline-block) {
+    padding: 0 2px;
+  }
+
+  /* === DESKTOP MARGIN NOTE COLUMNS === */
   :global(.post-content .footnote-layer--right) {
     position: absolute;
     top: 0;
@@ -96,7 +101,6 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     pointer-events: none;
   }
 
-  /* LEFT margin layer */
   :global(.post-content .footnote-layer--left) {
     position: absolute;
     top: 0;
@@ -109,22 +113,11 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 
   :global(.post-content .margin-note) {
     position: absolute;
-    // font-size: 0.8em;
     color: $gray;
-    // border-left: 1px solid #ccc;
-    padding-left: 8px;
     transform: translateY(0.15em);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease-out;
-  }
-
-  /* Make images inside notes behave */
-  :global(.post-content .margin-note img) {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0.25rem 0;
   }
 
   :global(.post-content .margin-note--right) {
@@ -135,46 +128,29 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   :global(.post-content .margin-note--left) {
     right: 0;
     text-align: right;
-    border-left: none;
-    // border-right: 1px solid #ccc;
-    padding-left: 0;
-    padding-right: 8px;
   }
 
-  /* visible state, toggled from JS */
   :global(.post-content .margin-note--visible) {
     opacity: 1;
   }
 
+  /* === MOBILE: INLINE FOOTNOTES AFTER TEXT === */
   @media (max-width: 768px) {
-    /* Don't use outer columns on mobile */
+    /* don't ever show side layers / margin notes on phone */
     :global(.post-content .footnote-layer--right),
-    :global(.post-content .footnote-layer--left) {
-      position: static;
-      width: 100%;
-      margin: 0;
-      pointer-events: auto; // allow clicks if needed later
-    }
-
-    /* Margin notes become inline blocks below the text instead of side columns */
+    :global(.post-content .footnote-layer--left),
     :global(.post-content .margin-note) {
-      position: relative;
-      padding-left: 0;
-      padding-right: 0;
-      margin-top: 4px;
-      opacity: 0;
-      display: none; // hidden by default
+      display: none !important;
     }
 
-    :global(.post-content .margin-note--left),
-    :global(.post-content .margin-note--right) {
-      text-align: left;
-    }
-
-    /* When JS toggles visible, just show them as normal blocks */
-    :global(.post-content .margin-note--visible) {
-      opacity: 1;
+    :global(.post-content .inline-footnote) {
       display: block;
+      margin-top: $lh / 2;
+      margin-bottom: $lh / 2;
+      padding: 8px;
+      background: $gray;
+      border-radius: $br;
+      margin-left: 5%;
     }
   }
 </style>

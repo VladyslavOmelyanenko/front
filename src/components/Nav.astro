@@ -10,10 +10,8 @@ const activeIndex = routes.findIndex(
   (route) => currentPath === route || currentPath.startsWith(route + "/")
 );
 
-// 👇 if we're on home ("/"), don't highlight anything
+// home → no highlight
 const isHome = currentPath === "/";
-
-// -1 means "no active item"
 const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
 ---
 
@@ -48,6 +46,17 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
     padding: 0;
     z-index: 1000;
     overflow: hidden;
+
+    /* Smooth hide/show */
+    transition:
+      top 0.25s ease,
+      opacity 0.25s ease;
+  }
+
+  /* hidden state when scrolling DOWN */
+  .nav-bar--hidden {
+    top: -80px;
+    opacity: 0;
   }
 
   .nav-bar li {
@@ -66,7 +75,7 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
     white-space: nowrap;
   }
 
-  /* highlight */
+  /* highlight bar */
   .animation {
     position: absolute;
     top: 0;
@@ -85,57 +94,64 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
 </style>
 
 <script>
-  const nav = document.getElementById("navBar");
-  const items = nav.querySelectorAll("li");
-  const highlight = nav.querySelector(".animation");
+  (function () {
+    const nav = document.getElementById("navBar");
+    if (!nav) return;
 
-  function moveHighlightToItem(item) {
-    const { offsetLeft, offsetWidth } = item;
-    highlight.style.transform = `translateX(${offsetLeft}px)`;
-    highlight.style.width = `${offsetWidth}px`;
-  }
+    const items = nav.querySelectorAll("li");
+    const highlight = nav.querySelector(".animation");
 
-  window.addEventListener("load", () => {
-    const index = Number(
-      getComputedStyle(nav).getPropertyValue("--active-index")
+    function moveHighlightToItem(item) {
+      const { offsetLeft, offsetWidth } = item;
+      highlight.style.transform = `translateX(${offsetLeft}px)`;
+      highlight.style.width = `${offsetWidth}px`;
+    }
+
+    function updateHighlight() {
+      const index = Number(
+        getComputedStyle(nav).getPropertyValue("--active-index")
+      );
+
+      if (index >= 0 && items[index]) {
+        moveHighlightToItem(items[index]);
+      } else {
+        highlight.style.width = "0";
+        highlight.style.transform = "translateX(0)";
+      }
+    }
+
+    // INITIAL POSITION
+    window.addEventListener("load", updateHighlight);
+    window.addEventListener("resize", updateHighlight);
+
+    // HOVER BEHAVIOR (desktop)
+    items.forEach((li) =>
+      li.addEventListener("mouseenter", () => moveHighlightToItem(li))
     );
 
-    if (index >= 0) {
-      moveHighlightToItem(items[index]);
-    } else {
-      // Home page → hide highlight
-      highlight.style.width = "0";
-      highlight.style.transform = "translateX(0)";
+    nav.addEventListener("mouseleave", updateHighlight);
+
+    // === HIDE ON SCROLL / SHOW ON SCROLL UP ===
+    let lastY = window.scrollY;
+
+    function onScroll() {
+      const currentY = window.scrollY;
+      const diff = currentY - lastY;
+
+      // small movements ignored for stability
+      if (Math.abs(diff) < 4) return;
+
+      if (currentY < 10 || diff < 0) {
+        // near top OR scrolling up → show nav
+        nav.classList.remove("nav-bar--hidden");
+      } else if (diff > 0 && currentY > 80) {
+        // scrolling down → hide nav
+        nav.classList.add("nav-bar--hidden");
+      }
+
+      lastY = currentY;
     }
-  });
 
-  items.forEach((li) => {
-    li.addEventListener("mouseenter", () => moveHighlightToItem(li));
-  });
-
-  nav.addEventListener("mouseleave", () => {
-    const index = Number(
-      getComputedStyle(nav).getPropertyValue("--active-index")
-    );
-
-    if (index >= 0) {
-      moveHighlightToItem(items[index]);
-    } else {
-      highlight.style.width = "0";
-      highlight.style.transform = "translateX(0)";
-    }
-  });
-
-  window.addEventListener("resize", () => {
-    const index = Number(
-      getComputedStyle(nav).getPropertyValue("--active-index")
-    );
-
-    if (index >= 0) {
-      moveHighlightToItem(items[index]);
-    } else {
-      highlight.style.width = "0";
-      highlight.style.transform = "translateX(0)";
-    }
-  });
+    window.addEventListener("scroll", onScroll);
+  })();
 </script>
