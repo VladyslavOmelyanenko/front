@@ -68,17 +68,15 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 
   /* === FOOTNOTE / MARGIN NOTE STYLES === */
 
-  /* paragraphs that may contain footnotes */
   :global(.post-content .pt-block) {
     position: relative;
   }
 
-  /* inline highlighted text */
   :global(.post-content .footnote-text) {
-    color: #888;
+    color: $gray;
+    text-decoration: underline;
   }
 
-  /* inline wrapper behaves normally */
   :global(.post-content .footnote) {
     position: static;
   }
@@ -88,22 +86,63 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     display: none;
   }
 
-  /* overlay container for margin notes */
-  :global(.post-content .footnote-layer) {
+  /* RIGHT margin layer */
+  :global(.post-content .footnote-layer--right) {
     position: absolute;
     top: 0;
-    left: 100%; /* start at right edge of text column */
-    margin-left: 16px; /* little gap from text */
-    width: 20vw; /* margin width */
+    left: 100%;
+    margin-left: 16px;
+    width: 20vw;
     pointer-events: none;
   }
 
-  /* each margin note, positioned by JS */
+  /* LEFT margin layer */
+  :global(.post-content .footnote-layer--left) {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    margin-right: 16px;
+    width: 20vw;
+    pointer-events: none;
+    text-align: right;
+  }
+
   :global(.post-content .margin-note) {
     position: absolute;
-    left: 0;
-    white-space: nowrap;
-    color: #aaa;
+    // font-size: 0.8em;
+    color: $gray;
+    // border-left: 1px solid #ccc;
+    padding-left: 8px;
     transform: translateY(0.15em);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
+  }
+
+  /* Make images inside notes behave */
+  :global(.post-content .margin-note img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.25rem 0;
+  }
+
+  :global(.post-content .margin-note--right) {
+    left: 0;
+    text-align: left;
+  }
+
+  :global(.post-content .margin-note--left) {
+    right: 0;
+    text-align: right;
+    border-left: none;
+    // border-right: 1px solid #ccc;
+    padding-left: 0;
+    padding-right: 8px;
+  }
+
+  /* visible state, toggled from JS */
+  :global(.post-content .margin-note--visible) {
+    opacity: 1;
   }
 </style>

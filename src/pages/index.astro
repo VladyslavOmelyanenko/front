@@ -39,7 +39,6 @@ const lowResUrls = assets.map((img) =>
 const initialIndex =
   hiResUrls.length > 0 ? Math.floor(Math.random() * hiResUrls.length) : 0;
 
-const firstHi = hiResUrls[initialIndex] ?? null;
 const firstLow = lowResUrls[initialIndex] ?? null;
 ---
 
@@ -53,7 +52,7 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     {
       firstLow && (
         <img
-          class="slideshow-image loading"
+          class="slideshow-image slideshow-image-primary loading"
           src={firstLow}
           alt="Featured slide"
           loading="lazy"
@@ -68,8 +67,18 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     const gallery = document.querySelector(".slideshow");
     if (!gallery) return;
 
-    const img = gallery.querySelector(".slideshow-image");
-    if (!img) return;
+    const primary = gallery.querySelector(".slideshow-image-primary");
+    if (!primary) return;
+
+    // Always create a secondary image.
+    // On desktop it's hidden by CSS; on mobile it's shown under the first.
+    const secondary = primary.cloneNode(false);
+    secondary.removeAttribute("src");
+    secondary.classList.remove("slideshow-image-primary");
+    secondary.classList.add("slideshow-image-secondary");
+    secondary.classList.remove("loading");
+    secondary.style.opacity = "0";
+    gallery.appendChild(secondary);
 
     let hi = [];
     let low = [];
@@ -84,45 +93,81 @@ const firstLow = lowResUrls[initialIndex] ?? null;
 
     if (!hi.length) return;
 
-    let index = parseInt(gallery.dataset.start, 10) || 0;
+    let currentIndex = parseInt(gallery.dataset.start, 10) || 0;
+    let nextIndex =
+      hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
 
-    function preloadNext(nextIndex) {
+    function preload(idx) {
       const pre = new Image();
-      pre.src = hi[nextIndex];
+      pre.src = hi[idx];
     }
 
-    function showImage(idx) {
-      const lowUrl = low[idx];
-      const hiUrl = hi[idx];
+    function showPair(a, b) {
+      const lowA = low[a];
+      const hiA = hi[a];
+      const lowB = low[b];
+      const hiB = hi[b];
 
-      img.classList.add("loading");
-      img.style.opacity = "0";
+      // low-res first
+      primary.classList.add("loading");
+      primary.style.opacity = "0";
+      secondary.classList.add("loading");
+      secondary.style.opacity = "0";
 
-      if (lowUrl) {
-        img.src = lowUrl;
+      if (lowA) primary.src = lowA;
+      if (lowB) secondary.src = lowB;
+
+      const hiImgA = new Image();
+      const hiImgB = new Image();
+      let loadedA = false;
+      let loadedB = false;
+
+      function finish() {
+        // when both hi-res images loaded, fade both in
+        if (loadedA && loadedB) {
+          primary.classList.remove("loading");
+          secondary.classList.remove("loading");
+          requestAnimationFrame(() => {
+            primary.style.opacity = "1";
+            secondary.style.opacity = "1";
+          });
+        }
       }
 
-      const hiImg = new Image();
-      hiImg.src = hiUrl;
-      hiImg.onload = () => {
-        img.src = hiUrl;
-        img.classList.remove("loading");
-        requestAnimationFrame(() => {
-          img.style.opacity = "1";
-        });
+      hiImgA.src = hiA;
+      hiImgA.onload = () => {
+        primary.src = hiA;
+        loadedA = true;
+        finish();
       };
 
-      const nextIndex = (idx + 1) % hi.length;
-      preloadNext(nextIndex);
+      hiImgB.src = hiB;
+      hiImgB.onload = () => {
+        secondary.src = hiB;
+        loadedB = true;
+        finish();
+      };
+
+      // Preload the one after `b`
+      const preloadIndex = (b + 1) % hi.length;
+      preload(preloadIndex);
     }
 
-    // show initial random slide
-    showImage(index);
+    // initial pair
+    showPair(currentIndex, nextIndex);
 
-    // click to go next
     gallery.addEventListener("click", () => {
-      index = (index + 1) % hi.length;
-      showImage(index);
+      // slide the window:
+      // new current = old next
+      // new next = next after that
+      currentIndex = nextIndex;
+      nextIndex = (nextIndex + 1) % hi.length;
+      showPair(currentIndex, nextIndex);
+    });
+
+    window.addEventListener("resize", () => {
+      // re-show current pair on resize; helps when crossing mobile/desktop breakpoint
+      showPair(currentIndex, nextIndex);
     });
   })();
 </script>
@@ -137,9 +182,11 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     background: #000;
     cursor: pointer;
     z-index: 999;
+    overflow: hidden;
   }
 
-  .slideshow-image {
+  .slideshow-image-primary,
+  .slideshow-image-secondary {
     width: 100vw;
     height: 100vh;
     object-fit: cover; // center & cover screen
@@ -152,9 +199,29 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     will-change: opacity, filter, transform;
   }
 
+  /* Secondary is hidden on desktop, but still kept in sync/preloaded */
+  .slideshow-image-secondary {
+    display: none;
+  }
+
   /* blurred low-res placeholder */
-  .slideshow-image.loading {
+  .slideshow-image-primary.loading,
+  .slideshow-image-secondary.loading {
     filter: blur(10px);
     transform: scale(1.03);
+  }
+
+  /* === Mobile: show both images stacked (current + next) === */
+  @media (max-width: 768px) {
+    .slideshow {
+      flex-direction: column;
+    }
+
+    .slideshow-image-primary,
+    .slideshow-image-secondary {
+      width: 100vw;
+      height: 50vh;
+      display: block;
+    }
   }
 </style>
