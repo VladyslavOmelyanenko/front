@@ -145,4 +145,36 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   :global(.post-content .margin-note--visible) {
     opacity: 1;
   }
+
+  @media (max-width: 768px) {
+    /* Don't use outer columns on mobile */
+    :global(.post-content .footnote-layer--right),
+    :global(.post-content .footnote-layer--left) {
+      position: static;
+      width: 100%;
+      margin: 0;
+      pointer-events: auto; // allow clicks if needed later
+    }
+
+    /* Margin notes become inline blocks below the text instead of side columns */
+    :global(.post-content .margin-note) {
+      position: relative;
+      padding-left: 0;
+      padding-right: 0;
+      margin-top: 4px;
+      opacity: 0;
+      display: none; // hidden by default
+    }
+
+    :global(.post-content .margin-note--left),
+    :global(.post-content .margin-note--right) {
+      text-align: left;
+    }
+
+    /* When JS toggles visible, just show them as normal blocks */
+    :global(.post-content .margin-note--visible) {
+      opacity: 1;
+      display: block;
+    }
+  }
 </style>

@@ -2,7 +2,7 @@
 const { blogPost } = Astro.props;
 ---
 
-<a href={'/blog/' + blogPost.slug}>
+<a href={"/blog/" + blogPost.slug}>
   <div class="blog-preview">
     <span class="blog-date">
       {
@@ -56,7 +56,6 @@ const { blogPost } = Astro.props;
 <style lang="scss">
   @import "../styles/_variables.scss";
 
-  /* Move by half the width because we now have 2 equal copies inline */
   @keyframes ticker {
     0% {
       transform: translateX(0);
@@ -85,7 +84,6 @@ const { blogPost } = Astro.props;
       overflow: hidden;
     }
 
-    /* description: takes all remaining space */
     .blog-short-description {
       flex: 1 1 auto;
       min-width: 0;
@@ -97,26 +95,29 @@ const { blogPost } = Astro.props;
       }
 
       .ticker-text {
-        padding-right: 40px; // spacing for loop
+        padding-right: 40px;
       }
 
-      /* only scrolling tickers get animation */
       .ticker--scrolling {
         animation: ticker var(--ticker-duration) linear infinite;
         animation-play-state: paused;
       }
     }
 
-    /* date: always fixed width */
     .blog-date {
       flex: 0 0 120px;
       width: 120px;
       justify-content: center;
     }
 
-    /* Hover row → only scrolling tickers move */
     &:hover .blog-short-description .ticker--scrolling {
       animation-play-state: running;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .blog-preview .blog-short-description .ticker--scrolling {
+      animation-play-state: running !important;
     }
   }
 </style>

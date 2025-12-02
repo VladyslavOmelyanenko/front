@@ -11,7 +11,7 @@ const thumbUrls = images.map(
 const initialImages = thumbUrls.slice(0, 3);
 ---
 
-<a href={'/works/' + workPost.slug}>
+<a href={"/works/" + workPost.slug}>
   <div class="work-preview" data-images={JSON.stringify(thumbUrls)}>
     <h2 class="work-title">{workPost.title}</h2>
 
@@ -34,6 +34,8 @@ const initialImages = thumbUrls.slice(0, 3);
   const SPEED = 150; // pixels per second for text ticker
   const ROTATE_INTERVAL = 300; // ms between image shifts
 
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
   // 1) Ticker duration setup (same speed for all)
   document.querySelectorAll("[data-ticker]").forEach((ticker) => {
     const singleWidth = ticker.scrollWidth / 2; // width of one text copy
@@ -41,7 +43,7 @@ const initialImages = thumbUrls.slice(0, 3);
     ticker.style.setProperty("--ticker-duration", `${duration}s`);
   });
 
-  // 2) Image rotation on hover (now using thumb URLs)
+  // 2) Image rotation
   document.querySelectorAll(".work-preview").forEach((row) => {
     const imgs = row.querySelectorAll(".work-image");
     const data = row.dataset.images || "[]";
@@ -79,8 +81,16 @@ const initialImages = thumbUrls.slice(0, 3);
       intervalId = null;
     };
 
-    row.addEventListener("mouseenter", startRotation);
-    row.addEventListener("mouseleave", stopRotation);
+    // === DESKTOP ===
+    if (!isMobile) {
+      row.addEventListener("mouseenter", startRotation);
+      row.addEventListener("mouseleave", stopRotation);
+    }
+
+    // === MOBILE ===
+    if (isMobile) {
+      startRotation(); // always rotating on mobile
+    }
   });
 </script>
 
@@ -144,8 +154,14 @@ const initialImages = thumbUrls.slice(0, 3);
   }
 
   @media (max-width: 768px) {
-    .work-short-description {
-      display: none!important;
+    .work-preview {
+      .work-title {
+        flex: 1;
+        min-width: 0;
+      }
+      .work-short-description {
+        display: none !important;
+      }
     }
   }
 </style>
