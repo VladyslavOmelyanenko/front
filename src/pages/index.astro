@@ -35,11 +35,8 @@ const lowResUrls = assets.map((img) =>
   urlFor(img.asset).width(64).height(64).fit("max").quality(20).url()
 );
 
-// random start
-const initialIndex =
-  hiResUrls.length > 0 ? Math.floor(Math.random() * hiResUrls.length) : 0;
-
-const firstLow = lowResUrls[initialIndex] ?? null;
+// simple first placeholder (real start index is randomized on the client)
+const firstLow = lowResUrls[0] ?? null;
 ---
 
 <Layout>
@@ -47,7 +44,6 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     class="slideshow"
     data-hi={JSON.stringify(hiResUrls)}
     data-low={JSON.stringify(lowResUrls)}
-    data-start={initialIndex}
   >
     {
       firstLow && (
@@ -93,7 +89,8 @@ const firstLow = lowResUrls[initialIndex] ?? null;
 
     if (!hi.length) return;
 
-    let currentIndex = parseInt(gallery.dataset.start, 10) || 0;
+    // 🔀 Random starting index on the client
+    let currentIndex = Math.floor(Math.random() * hi.length);
     let nextIndex =
       hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
 
@@ -108,44 +105,35 @@ const firstLow = lowResUrls[initialIndex] ?? null;
       const lowB = low[b];
       const hiB = hi[b];
 
-      // low-res first
+      // start transition: fade both out
       primary.classList.add("loading");
-      primary.style.opacity = "0";
       secondary.classList.add("loading");
+      primary.style.opacity = "0";
       secondary.style.opacity = "0";
 
+      // low-res placeholders immediately
       if (lowA) primary.src = lowA;
       if (lowB) secondary.src = lowB;
 
       const hiImgA = new Image();
       const hiImgB = new Image();
-      let loadedA = false;
-      let loadedB = false;
-
-      function finish() {
-        // when both hi-res images loaded, fade both in
-        if (loadedA && loadedB) {
-          primary.classList.remove("loading");
-          secondary.classList.remove("loading");
-          requestAnimationFrame(() => {
-            primary.style.opacity = "1";
-            secondary.style.opacity = "1";
-          });
-        }
-      }
 
       hiImgA.src = hiA;
       hiImgA.onload = () => {
         primary.src = hiA;
-        loadedA = true;
-        finish();
+        primary.classList.remove("loading");
+        requestAnimationFrame(() => {
+          primary.style.opacity = "1";
+        });
       };
 
       hiImgB.src = hiB;
       hiImgB.onload = () => {
         secondary.src = hiB;
-        loadedB = true;
-        finish();
+        secondary.classList.remove("loading");
+        requestAnimationFrame(() => {
+          secondary.style.opacity = "1";
+        });
       };
 
       // Preload the one after `b`
@@ -192,7 +180,7 @@ const firstLow = lowResUrls[initialIndex] ?? null;
     object-fit: cover; // center & cover screen
     display: block;
     transition:
-      opacity 0.5s ease-out,
+      opacity 0.4s ease-out,
       filter 0.3s ease-out,
       transform 0.3s ease-out;
     opacity: 1;
@@ -208,7 +196,7 @@ const firstLow = lowResUrls[initialIndex] ?? null;
   .slideshow-image-primary.loading,
   .slideshow-image-secondary.loading {
     filter: blur(10px);
-    transform: scale(1.03);
+    transform: scale(1.02);
   }
 
   /* === Mobile: show both images stacked (current + next) === */
