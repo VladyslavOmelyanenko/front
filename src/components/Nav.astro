@@ -1,30 +1,11 @@
 ---
-const rawPath = Astro.url.pathname;
-
-// normalize: remove trailing slash except for root
-const currentPath = rawPath === "/" ? "/" : rawPath.replace(/\/+$/, "");
-
 const routes = ["/works", "/about", "/blog"];
-
-const activeIndex = routes.findIndex(
-  (route) => currentPath === route || currentPath.startsWith(route + "/")
-);
-
-// home → no highlight
-const isHome = currentPath === "/";
-const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
 ---
 
-<ul class="nav-bar" id="navBar" style={`--active-index:${safeIndex}`}>
-  <li class={currentPath.startsWith("/works") ? "active" : ""}>
-    <a href="/works">Works</a>
-  </li>
-  <li class={currentPath.startsWith("/about") ? "active" : ""}>
-    <a href="/about">About</a>
-  </li>
-  <li class={currentPath.startsWith("/blog") ? "active" : ""}>
-    <a href="/blog">Blog</a>
-  </li>
+<ul class="nav-bar" id="navBar" data-routes={JSON.stringify(routes)}>
+  <li><a href="/works">Works</a></li>
+  <li><a href="/about">About</a></li>
+  <li><a href="/blog">Blog</a></li>
 
   <div class="animation"></div>
 </ul>
@@ -46,14 +27,11 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
     padding: 0;
     z-index: 1000;
     overflow: hidden;
-
-    /* Smooth hide/show */
     transition:
       top 0.25s ease,
       opacity 0.25s ease;
   }
 
-  /* hidden state when scrolling DOWN */
   .nav-bar--hidden {
     top: -80px;
     opacity: 0;
@@ -75,7 +53,6 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
     white-space: nowrap;
   }
 
-  /* highlight bar */
   .animation {
     position: absolute;
     top: 0;
@@ -92,66 +69,3 @@ const safeIndex = isHome ? -1 : activeIndex === -1 ? 0 : activeIndex;
       width 0.25s ease;
   }
 </style>
-
-<script>
-  (function () {
-    const nav = document.getElementById("navBar");
-    if (!nav) return;
-
-    const items = nav.querySelectorAll("li");
-    const highlight = nav.querySelector(".animation");
-
-    function moveHighlightToItem(item) {
-      const { offsetLeft, offsetWidth } = item;
-      highlight.style.transform = `translateX(${offsetLeft}px)`;
-      highlight.style.width = `${offsetWidth}px`;
-    }
-
-    function updateHighlight() {
-      const index = Number(
-        getComputedStyle(nav).getPropertyValue("--active-index")
-      );
-
-      if (index >= 0 && items[index]) {
-        moveHighlightToItem(items[index]);
-      } else {
-        highlight.style.width = "0";
-        highlight.style.transform = "translateX(0)";
-      }
-    }
-
-    // INITIAL POSITION
-    window.addEventListener("load", updateHighlight);
-    window.addEventListener("resize", updateHighlight);
-
-    // HOVER BEHAVIOR (desktop)
-    items.forEach((li) =>
-      li.addEventListener("mouseenter", () => moveHighlightToItem(li))
-    );
-
-    nav.addEventListener("mouseleave", updateHighlight);
-
-    // === HIDE ON SCROLL / SHOW ON SCROLL UP ===
-    let lastY = window.scrollY;
-
-    function onScroll() {
-      const currentY = window.scrollY;
-      const diff = currentY - lastY;
-
-      // small movements ignored for stability
-      if (Math.abs(diff) < 4) return;
-
-      if (currentY < 10 || diff < 0) {
-        // near top OR scrolling up → show nav
-        nav.classList.remove("nav-bar--hidden");
-      } else if (diff > 0 && currentY > 80) {
-        // scrolling down → hide nav
-        nav.classList.add("nav-bar--hidden");
-      }
-
-      lastY = currentY;
-    }
-
-    window.addEventListener("scroll", onScroll);
-  })();
-</script>

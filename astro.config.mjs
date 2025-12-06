@@ -13,6 +13,6 @@ export default defineConfig({
       // Set useCdn to false if you're building statically.
       useCdn: false,
     }),
-    react()
+    react(),
   ],
 });
