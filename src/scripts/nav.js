@@ -47,6 +47,15 @@ function initNav(instantInit = false) {
   function updateForCurrentPath(instant = false) {
     requestAnimationFrame(() => {
       const index = computeIndex(window.location.pathname);
+
+      // Remove old active states
+      items.forEach((li) => li.querySelector("a").classList.remove("active"));
+
+      // Apply new active state
+      if (index >= 0 && items[index]) {
+        items[index].querySelector("a").classList.add("active");
+      }
+
       applyHighlight(index, instant);
     });
   }
