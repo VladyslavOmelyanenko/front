@@ -23,7 +23,7 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
     function computeIndex(path) {
       let p = clean(path);
 
-      // During Astro View Transitions, use the persisted route
+      // During Astro View Transitions, use the persisted route if needed
       if (nav.dataset.persistedRoute && !routes.includes(p)) {
         p = clean(nav.dataset.persistedRoute);
       }
@@ -181,4 +181,3 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
 
   window.addEventListener("scroll", handleScrollHideNav, { passive: true });
 }
-cg

@@ -61,22 +61,22 @@ const routes = ["/works", "/about", "/blog"];
     white-space: nowrap;
     position: relative;
     z-index: 2;
-    transition: color 0.15s ease; /* desktop-only, overridden on touch */
-  }
-
-  /* active link only when NOT hovering nav */
-  .nav-bar:not(:hover) a.active {
-    color: #fff;
-  }
-
-  /* when hovering nav: reset all to black */
-  .nav-bar:hover a {
-    color: #000;
+    transition: color 0.15s ease;
   }
 
   /* hovered link is white */
   .nav-bar a:hover {
     color: #fff;
+  }
+
+  /* when hovering nav: reset all to black (non-active) */
+  .nav-bar:hover a {
+    color: #000;
+  }
+
+  /* ACTIVE LINK: always white, overrides hover rules */
+  .nav-bar a.active {
+    color: #fff !important;
   }
 
   .animation {
@@ -96,23 +96,23 @@ const routes = ["/works", "/about", "/blog"];
   }
 
   /* On touch devices:
-     - no color transition (instant change)
-     - active link always white, others black
+     - instant color changes
+     - active link always white
      - ignore hover-based colors to avoid ghost hover weirdness
   */
   @media (hover: none) {
     .nav-bar a {
       transition: none;
-      color: #000;
+      color: #000 !important;
     }
 
     .nav-bar a.active {
-      color: #fff;
+      color: #fff !important;
     }
 
     .nav-bar:hover a,
     .nav-bar a:hover {
-      color: inherit;
+      color: inherit !important;
     }
   }
 </style>
