@@ -1,163 +1,145 @@
-// Guard against double-initialization when View Transitions
-// reload this script on each new page.
+// Prevent double-initialization across transitions
 if (!window.__NAV_SCRIPT_INITIALIZED__) {
   window.__NAV_SCRIPT_INITIALIZED__ = true;
 
-  function initNav(instantInit = false) {
+  function getNavParts() {
     const nav = document.getElementById("navBar");
-    if (!nav) return;
+    if (!nav) return null;
 
     const items = Array.from(nav.querySelectorAll("li"));
     const highlight = nav.querySelector(".animation");
     const routes = JSON.parse(nav.dataset.routes || "[]");
 
-    if (!highlight || items.length === 0) return;
+    if (!highlight || items.length === 0) return null;
 
-    /* -----------------------------
-        ROUTE CLEAN + INDEX LOGIC
-    ------------------------------ */
-    function clean(path) {
-      return path === "/" ? "/" : path.replace(/\/+$/, "");
+    return { nav, items, highlight, routes };
+  }
+
+  function cleanPath(path) {
+    return path === "/" ? "/" : path.replace(/\/+$/, "");
+  }
+
+  function computeIndex(path, routes) {
+    const p = cleanPath(path);
+    if (p === "/") return -1;
+
+    for (let i = 0; i < routes.length; i++) {
+      const route = routes[i];
+      if (p === route || p.startsWith(route + "/")) return i;
+    }
+    return -1;
+  }
+
+  function applyHighlight(parts, index, instant = false) {
+    const { items, highlight } = parts;
+
+    if (instant) {
+      highlight.style.transition = "none";
     }
 
-    function computeIndex(path) {
-      let p = clean(path);
-
-      // During Astro View Transitions, use the persisted route if needed
-      if (nav.dataset.persistedRoute && !routes.includes(p)) {
-        p = clean(nav.dataset.persistedRoute);
-      }
-
-      for (let i = 0; i < routes.length; i++) {
-        const route = routes[i];
-        if (p === route || p.startsWith(route + "/")) return i;
-      }
-
-      return -1;
+    if (index < 0 || !items[index]) {
+      highlight.style.width = "0px";
+      highlight.style.transform = "translateX(0px)";
+    } else {
+      const li = items[index];
+      highlight.style.width = `${li.offsetWidth}px`;
+      highlight.style.transform = `translateX(${li.offsetLeft}px)`;
     }
 
-    /* -----------------------------
-        HIGHLIGHT MOVING BAR
-    ------------------------------ */
-    function applyHighlight(index, instant = false) {
-      if (instant) {
-        highlight.style.transition = "none";
-      }
+    if (instant) {
+      // force reflow, then restore transitions
+      // eslint-disable-next-line no-unused-expressions
+      highlight.offsetHeight;
+      highlight.style.transition = "";
+    }
+  }
 
-      if (index < 0 || !items[index]) {
-        highlight.style.width = "0px";
-        highlight.style.transform = "translateX(0px)";
-      } else {
-        const li = items[index];
-        highlight.style.width = `${li.offsetWidth}px`;
-        highlight.style.transform = `translateX(${li.offsetLeft}px)`;
-      }
+  function setActiveIndex(parts, index, { instant = false } = {}) {
+    const { items } = parts;
 
-      if (instant) {
-        // force reflow, then restore transitions
-        // eslint-disable-next-line no-unused-expressions
-        highlight.offsetHeight;
-        highlight.style.transition = "";
-      }
+    // Clear all active
+    items.forEach((li) => {
+      const a = li.querySelector("a");
+      if (a) a.classList.remove("active");
+    });
+
+    // Apply active
+    if (index >= 0 && items[index]) {
+      const a = items[index].querySelector("a");
+      if (a) a.classList.add("active");
     }
 
-    function setActiveIndex(index, opts = { instant: false }) {
-      // Clear all active
-      items.forEach((li) => {
-        const a = li.querySelector("a");
-        if (a) a.classList.remove("active");
-      });
+    applyHighlight(parts, index, instant);
+  }
 
-      // Apply active
-      if (index >= 0 && items[index]) {
-        const a = items[index].querySelector("a");
-        if (a) a.classList.add("active");
-      }
+  function updateNavForPath(path, { instant = false } = {}) {
+    const parts = getNavParts();
+    if (!parts) return;
 
-      applyHighlight(index, opts.instant);
-    }
+    const { nav, routes } = parts;
+    const index = computeIndex(path, routes);
 
-    function updateForCurrentPath(instant = false) {
-      requestAnimationFrame(() => {
-        const index = computeIndex(window.location.pathname);
-        setActiveIndex(index, { instant });
-      });
+    requestAnimationFrame(() => {
+      setActiveIndex(parts, index, { instant });
 
-      // Avoid weird interactivity mid-transition
+      // Optional: temporary pointer-events guard
       nav.style.pointerEvents = "none";
       requestAnimationFrame(() => {
         nav.style.pointerEvents = "";
       });
-    }
+    });
+  }
 
-    /* -----------------------------
-        EVENTS
-    ------------------------------ */
+  function initNav(instantInit = false) {
+    const parts = getNavParts();
+    if (!parts) return;
 
-    // Desktop hover highlight
+    const { nav, items } = parts;
+
+    // Initial placement, based on current URL
+    updateNavForPath(window.location.pathname, { instant: instantInit });
+
+    // Hover highlight (desktop)
     items.forEach((li, index) => {
-      li.onmouseenter = () => applyHighlight(index);
-
-      // Instant update on tap/click (mobile + desktop)
-      li.addEventListener("click", () => {
-        const a = li.querySelector("a");
-        if (!a) return;
-
-        try {
-          const url = new URL(a.href, window.location.origin);
-          const path = url.pathname;
-          nav.dataset.persistedRoute = path;
-        } catch {
-          // ignore URL parsing failures
-        }
-
-        // Instantly mark this item active + move highlight
-        setActiveIndex(index, { instant: true });
-        // Let navigation proceed normally
-      });
+      li.onmouseenter = () => {
+        const innerParts = getNavParts();
+        if (!innerParts) return;
+        applyHighlight(innerParts, index, false);
+      };
     });
 
-    nav.onmouseleave = () => updateForCurrentPath(false);
-    window.onresize = () => updateForCurrentPath(true);
+    // Reset highlight to active on mouse leave
+    nav.onmouseleave = () => {
+      updateNavForPath(window.location.pathname, { instant: false });
+    };
 
-    // Initial placement
-    updateForCurrentPath(instantInit);
+    // On resize, recalc position instantly
+    window.onresize = () => {
+      updateNavForPath(window.location.pathname, { instant: true });
+    };
   }
 
   /* ======================================
-     ASTRO EVENT HOOKS (View Transitions)
+     ASTRO VIEW TRANSITION EVENTS
   ====================================== */
 
-  // BEFORE SWAP: freeze current selection so it never flashes
-  document.addEventListener("astro:before-swap", () => {
-    const nav = document.getElementById("navBar");
-    if (!nav) return;
+  // 🔥 As soon as navigation starts, update nav to the *incoming* path
+  document.addEventListener("astro:before-preparation", (event) => {
+    const toUrl = event.to || new URL(window.location.href);
+    const path = toUrl.pathname;
 
-    nav.classList.add("freeze-highlight");
-
-    // Save current route to restore active state during transition
-    nav.dataset.persistedRoute = window.location.pathname;
+    updateNavForPath(path, { instant: true });
   });
 
-  // AFTER SWAP: restore normal behavior + initialize instantly
+  // After contents swap, just re-sync (for layout changes, etc.)
   document.addEventListener("astro:after-swap", () => {
-    const nav = document.getElementById("navBar");
-    if (!nav) return;
-
     initNav(true);
-
-    // Remove freeze after highlight is placed
-    requestAnimationFrame(() => {
-      nav.classList.remove("freeze-highlight");
-    });
-
-    // Mobile Safari hover reset hack
-    const evt = new MouseEvent("mousemove", { bubbles: true });
-    document.dispatchEvent(evt);
   });
 
-  // Normal full reload
-  document.addEventListener("astro:page-load", () => initNav(false));
+  // On full page load
+  document.addEventListener("astro:page-load", () => {
+    initNav(false);
+  });
 
   /* ======================================
      NAV HIDE ON SCROLL

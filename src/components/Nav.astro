@@ -46,7 +46,7 @@ const routes = ["/works", "/about", "/blog"];
   .nav-bar li a {
     position: relative;
     cursor: none;
-    z-index: 3; /* higher than animation */
+    z-index: 3; /* above animation */
   }
 
   /* base link styles */
@@ -69,12 +69,12 @@ const routes = ["/works", "/about", "/blog"];
     color: #fff;
   }
 
-  /* when hovering nav: reset all to black (non-active) */
+  /* when hovering nav: reset all non-active links to black */
   .nav-bar:hover a {
     color: #000;
   }
 
-  /* ACTIVE LINK: always white, overrides hover rules */
+  /* ACTIVE LINK: always white, overrides everything */
   .nav-bar a.active {
     color: #fff !important;
   }
@@ -96,9 +96,9 @@ const routes = ["/works", "/about", "/blog"];
   }
 
   /* On touch devices:
-     - instant color changes
+     - no color animation
      - active link always white
-     - ignore hover-based colors to avoid ghost hover weirdness
+     - ignore hover-based colors
   */
   @media (hover: none) {
     .nav-bar a {
