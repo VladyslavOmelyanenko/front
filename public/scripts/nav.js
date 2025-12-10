@@ -61,23 +61,26 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
       }
     }
 
+    function setActiveIndex(index, opts = { instant: false }) {
+      // Clear all active
+      items.forEach((li) => {
+        const a = li.querySelector("a");
+        if (a) a.classList.remove("active");
+      });
+
+      // Apply active
+      if (index >= 0 && items[index]) {
+        const a = items[index].querySelector("a");
+        if (a) a.classList.add("active");
+      }
+
+      applyHighlight(index, opts.instant);
+    }
+
     function updateForCurrentPath(instant = false) {
       requestAnimationFrame(() => {
         const index = computeIndex(window.location.pathname);
-
-        // Clear all active
-        items.forEach((li) => {
-          const a = li.querySelector("a");
-          if (a) a.classList.remove("active");
-        });
-
-        // Apply active to current route
-        if (index >= 0 && items[index]) {
-          const a = items[index].querySelector("a");
-          if (a) a.classList.add("active");
-        }
-
-        applyHighlight(index, instant);
+        setActiveIndex(index, { instant });
       });
 
       // Avoid weird interactivity mid-transition
@@ -90,8 +93,28 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
     /* -----------------------------
         EVENTS
     ------------------------------ */
+
+    // Desktop hover highlight
     items.forEach((li, index) => {
       li.onmouseenter = () => applyHighlight(index);
+
+      // Instant update on tap/click (mobile + desktop)
+      li.addEventListener("click", () => {
+        const a = li.querySelector("a");
+        if (!a) return;
+
+        try {
+          const url = new URL(a.href, window.location.origin);
+          const path = url.pathname;
+          nav.dataset.persistedRoute = path;
+        } catch {
+          // ignore URL parsing failures
+        }
+
+        // Instantly mark this item active + move highlight
+        setActiveIndex(index, { instant: true });
+        // Let navigation proceed normally
+      });
     });
 
     nav.onmouseleave = () => updateForCurrentPath(false);
@@ -158,3 +181,4 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
 
   window.addEventListener("scroll", handleScrollHideNav, { passive: true });
 }
+cg
