@@ -8,7 +8,7 @@ const works = await getPosts("works", "selectedWorkPosts");
 // console.log(works);
 ---
 
-<Layout title="Dzastins’ website—Work">
+<Layout title="Dzastins’ website—Works">
   <div class="work-feed">
     {works.map((work) => <WorkPreview workPost={work} />)}
   </div>

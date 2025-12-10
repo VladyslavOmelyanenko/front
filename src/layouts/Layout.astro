@@ -15,7 +15,20 @@ const { title } = Astro.props;
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAABAAEAAAICTAEBAAAAAAAAFgAAAAAAAABGAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A"
+    />
+
+    <link
+      rel="preload"
+      href="/fonts/neue.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
   </head>
@@ -50,10 +63,10 @@ const { title } = Astro.props;
     height: 100%;
   }
   .main-container {
-    width: 50%;
-    margin-left: 25%;
+    width: 42%;
+    margin-left: 29%;
     padding-bottom: 50px;
-    padding-top: 100px;
+    padding-top: 132px;
   }
   .copyright {
     position: fixed;

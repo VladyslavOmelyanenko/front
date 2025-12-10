@@ -21,9 +21,14 @@ export async function getStaticPaths() {
 const { postSlug } = Astro.props;
 const post = await getPostBySlug(postSlug);
 if (!post) return Astro.redirect("/404");
+const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 ---
 
-<Layout title={`Dzastin’s’—${post.title}`}>
+<Layout title={`Dzastin’s’—${postDate}`}>
   <Feed>
     <Post post={post} />
   </Feed>
