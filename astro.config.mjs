@@ -6,6 +6,9 @@ import react from '@astrojs/react';
 
 
 export default defineConfig({
+  transitions: {
+    enabled: true,
+  },
   integrations: [
     sanity({
       projectId: "saq01wqu",

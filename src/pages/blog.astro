@@ -6,12 +6,11 @@ import { getPosts } from "../data/works";
 const blogPosts = await getPosts("blog", "selectedBlogPosts");
 ---
 
-<Layout title="Dzastins’ website—Blog">
+<Layout title="Dzastins Zavadzkis—Blog">
   <div class="blog-feed">
-    {blogPosts.map(blogPost => <BlogPreview blogPost={blogPost}/>)}
+    {blogPosts.map((blogPost) => <BlogPreview blogPost={blogPost} />)}
   </div>
 </Layout>
-
 
 <style lang="scss">
   .blog-feed {

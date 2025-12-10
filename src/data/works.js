@@ -1,6 +1,8 @@
 import { client } from "../lib/sanity.js";
 
-
+/* -------------------------------------------------------
+   Fetch MULTIPLE POSTS (list page)
+------------------------------------------------------- */
 export async function getPosts(type, field) {
   try {
     const posts = await client.fetch(
@@ -8,30 +10,38 @@ export async function getPosts(type, field) {
         title,
         "slug": slug.current,
         postDate,
-        postImage{ asset },
         postDescription,
         postAuthor,
-        "images": content[_type == "image"] {
+
+        // MAIN POST IMAGE
+        postImage{
+          asset,                                   // keep the _ref here
+          "url": asset->url,
+          "metadata": asset->metadata{dimensions}
+        },
+
+        // INLINE CONTENT IMAGES
+        "images": content[_type == "image"]{
           _key,
-          asset,
-          alt
+          alt,
+          asset,                                  // keep the _ref here too
+          "url": asset->url,
+          "metadata": asset->metadata{dimensions}
         }
-      } | order(postDate desc)`, // 👈 sorts newest → oldest
+      } | order(postDate desc)`,
       { type }
     );
 
-    if (!posts || posts.length === 0) {
-      console.warn(`No posts found for type: ${type}`);
-      return [];
-    }
-
-    return posts;
+    return posts ?? [];
   } catch (error) {
     console.error(`Failed to fetch ${type} posts:`, error);
     throw new Error(`Failed to fetch ${type} posts`);
   }
 }
 
+/* -------------------------------------------------------
+   Fetch a SINGLE WORK POST
+------------------------------------------------------- */
 export async function getWorkPost(slug) {
   try {
     const post = await client.fetch(
@@ -39,14 +49,23 @@ export async function getWorkPost(slug) {
         title,
         "slug": slug.current,
         postDate,
+
         postImage{
-          asset
+          asset,                // <-- KEEP _ref!
+          "url": asset->url,
+          "metadata": asset->metadata{dimensions}
         },
+
         postDescription,
+
         content[]{
           ...,
           _type == "image" => {
-            ...,
+            _key,
+            alt,
+            asset,              // <-- MUST be ONLY asset, not asset->{...}
+            "url": asset->url,
+            "metadata": asset->metadata{dimensions}
           }
         }
       }`,
@@ -60,7 +79,9 @@ export async function getWorkPost(slug) {
   }
 }
 
-
+/* -------------------------------------------------------
+   Fetch the ABOUT PAGE post
+------------------------------------------------------- */
 export async function getAboutPost() {
   try {
     const data = await client.fetch(`
@@ -69,17 +90,30 @@ export async function getAboutPost() {
           title,
           "slug": slug.current,
           postDate,
-          postImage{asset},
+
+          postImage{
+            asset->{
+              url,
+              metadata { dimensions }
+            }
+          },
+
           postDescription,
+
           content[]{
             ...,
-            _type == "image" => { ... } // keep as-is if you rely on asset._ref
+
+            _type == "image" => {
+              ...,
+              asset,
+              "url": asset->url,
+              "metadata": asset->metadata{dimensions}
+            }
           }
         }
       }
     `);
 
-    // Return the referenced post (or null if missing)
     return data?.aboutPost ?? null;
   } catch (err) {
     console.error("Failed to fetch about post:", err);

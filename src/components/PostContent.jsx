@@ -2,14 +2,55 @@ import { useEffect } from "react";
 import { PortableText } from "@portabletext/react";
 import { urlFor } from "../lib/sanity";
 
-// Image renderer
-function SanityImage({ value }) {
-  const ref = value?.asset?._ref || value?.asset?._id;
-  if (!ref) return null;
-  const src = urlFor(value).width(1200).auto("format").url();
-  const alt = value?.alt || value?.caption || "";
-  return <img src={src} alt={alt} loading="lazy" />;
+// Helper: extract width & height from Sanity asset _ref
+function getDimensionsFromRef(ref) {
+  // Example ref: "image-788af135ba38dea6af30389df3e60510c88ec723-2795x4193-jpg"
+  if (!ref || typeof ref !== "string") return {};
+  const parts = ref.split("-");
+  const sizePart = parts[parts.length - 2]; // "2795x4193"
+  if (!sizePart) return {};
+  const [wStr, hStr] = sizePart.split("x");
+  const width = parseInt(wStr, 10);
+  const height = parseInt(hStr, 10);
+  if (!width || !height) return {};
+  return { width, height };
 }
+
+// Image renderer for PortableText
+function SanityImage({ value }) {
+  const asset = value?.asset;
+  if (!asset) return null;
+
+  const ref = asset._ref || asset._id;
+  if (!ref) return null;
+
+  // Build URL from the asset reference
+  const src = urlFor({ _ref: ref }).width(1400).auto("format").url();
+  const alt = value?.alt || value?.caption || "";
+
+  // Get intrinsic dimensions from the _ref string
+  const { width, height } = getDimensionsFromRef(ref);
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      // Give the browser real, per-image dimensions
+      width={width || undefined}
+      height={height || undefined}
+      style={{
+        width: "100%",
+        height: "auto",
+        display: "block",
+        // 🔥 No forced aspectRatio like "16 / 9" here anymore
+      }}
+    />
+  );
+}
+
+
 
 // shared link renderer
 const LinkMark = ({ children, value }) => {
