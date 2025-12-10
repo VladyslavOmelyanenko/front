@@ -1,16 +1,25 @@
 function initWorkPreviews() {
-  const SPEED = 150;
-  const ROTATE_INTERVAL = 300;
   const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
-  // Text ticker
+  // Different speeds for desktop vs mobile
+  const SPEED_DESKTOP = 150;
+  const SPEED_MOBILE = 60; // slower ticker
+  const SPEED = isMobile ? SPEED_MOBILE : SPEED_DESKTOP;
+
+  const ROTATE_INTERVAL_DESKTOP = 300;
+  const ROTATE_INTERVAL_MOBILE = 5000; // slower rotation
+  const ROTATE_INTERVAL = isMobile
+    ? ROTATE_INTERVAL_MOBILE
+    : ROTATE_INTERVAL_DESKTOP;
+
+  // --- TEXT TICKER ---
   document.querySelectorAll("[data-ticker]").forEach((ticker) => {
     const singleWidth = ticker.scrollWidth / 2;
     const duration = singleWidth / SPEED;
     ticker.style.setProperty("--ticker-duration", `${duration}s`);
   });
 
-  // Image rotation
+  // --- IMAGE ROTATION ---
   document.querySelectorAll(".work-preview").forEach((row) => {
     const imgs = row.querySelectorAll(".work-image");
     const urls = JSON.parse(row.dataset.images || "[]");
@@ -42,8 +51,8 @@ function initWorkPreviews() {
     if (isMobile) {
       startRotation();
     } else {
-      row.addEventListener("mouseenter", startRotation);
-      row.addEventListener("mouseleave", stopRotation);
+      row.onmouseenter = startRotation;
+      row.onmouseleave = stopRotation;
     }
   });
 }

@@ -1,7 +1,8 @@
-// FINAL NAV HIGHLIGHT SCRIPT (reload behaves differently from client navigation)
-// ------------------------------------------------------------------------------
+
 
 function initNav(instantInit = false) {
+  
+  
   const nav = document.getElementById("navBar");
   if (!nav) return;
 
@@ -58,15 +59,19 @@ function initNav(instantInit = false) {
 
       applyHighlight(index, instant);
     });
+    nav.style.pointerEvents = "none";
+    requestAnimationFrame(() => {
+      nav.style.pointerEvents = "";
+    });
   }
 
-  items.forEach((li, index) => {
-    li.addEventListener("mouseenter", () => applyHighlight(index));
-  });
+ items.forEach((li, index) => {
+   li.onmouseenter = () => applyHighlight(index);
+ });
 
-  nav.addEventListener("mouseleave", () => updateForCurrentPath(false));
+ nav.onmouseleave = () => updateForCurrentPath(false);
 
-  window.addEventListener("resize", () => updateForCurrentPath(true));
+ window.onresize = () => updateForCurrentPath(true);
 
   // Initial placement
   updateForCurrentPath(instantInit);
@@ -76,4 +81,33 @@ function initNav(instantInit = false) {
 document.addEventListener("astro:page-load", () => initNav(false));
 
 // CLIENT NAVIGATION → avoid slide-from-zero (instantInit = true)
-document.addEventListener("astro:after-swap", () => initNav(true));
+document.addEventListener("astro:after-swap", () => {
+  initNav(true);
+
+  // force browser to re-evaluate hover state
+  const evt = new MouseEvent("mousemove", { bubbles: true });
+  document.dispatchEvent(evt);
+});
+
+
+// --- NAV HIDE ON SCROLL ---
+let lastScrollY = window.scrollY;
+
+function handleScrollHideNav() {
+  const nav = document.getElementById("navBar");
+  if (!nav) return;
+
+  const current = window.scrollY;
+
+  if (current > lastScrollY) {
+    // scrolling down → hide nav
+    nav.classList.add("nav-bar--hidden");
+  } else {
+    // scrolling up → show nav
+    nav.classList.remove("nav-bar--hidden");
+  }
+
+  lastScrollY = current;
+}
+
+window.addEventListener("scroll", handleScrollHideNav, { passive: true });

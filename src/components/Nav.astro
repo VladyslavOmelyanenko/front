@@ -3,11 +3,10 @@ const routes = ["/works", "/about", "/blog"];
 ---
 
 <ul class="nav-bar" id="navBar" data-routes={JSON.stringify(routes)}>
+  <div class="animation"></div>
   <li><a href="/works">Works</a></li>
   <li><a href="/about">About</a></li>
   <li><a href="/blog">Blog</a></li>
-
-  <div class="animation"></div>
 </ul>
 
 <style lang="scss">
@@ -25,6 +24,7 @@ const routes = ["/works", "/about", "/blog"];
     border-radius: $br;
     width: max-content;
     padding: 0;
+    cursor: none;
     z-index: 1000;
     overflow: hidden;
     transition:
@@ -40,6 +40,13 @@ const routes = ["/works", "/about", "/blog"];
   .nav-bar li {
     position: relative;
     z-index: 1;
+    cursor: none;
+  }
+  .nav-bar li a {
+    position: relative;
+    cursor: none;
+
+    z-index: 3; /* higher than animation */
   }
 
   /* transition */
@@ -72,6 +79,8 @@ const routes = ["/works", "/about", "/blog"];
     text-decoration: none;
     white-space: nowrap;
     transition: color 0.25s ease;
+    position: relative;
+    z-index: 2;
   }
 
   .animation {
@@ -81,7 +90,7 @@ const routes = ["/works", "/about", "/blog"];
     height: 100%;
     background: #000;
     border-radius: $br;
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
     width: 0;
     transform: translateX(0);
