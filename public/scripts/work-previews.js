@@ -1,13 +1,14 @@
 function initWorkPreviews() {
-  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(
+    navigator.userAgent
+  );
 
-  // Different speeds for desktop vs mobile
   const SPEED_DESKTOP = 150;
-  const SPEED_MOBILE = 60; // slower ticker
+  const SPEED_MOBILE = 60;
   const SPEED = isMobile ? SPEED_MOBILE : SPEED_DESKTOP;
 
   const ROTATE_INTERVAL_DESKTOP = 300;
-  const ROTATE_INTERVAL_MOBILE = 5000; // slower rotation
+  const ROTATE_INTERVAL_MOBILE = 5000;
   const ROTATE_INTERVAL = isMobile
     ? ROTATE_INTERVAL_MOBILE
     : ROTATE_INTERVAL_DESKTOP;
@@ -57,7 +58,5 @@ function initWorkPreviews() {
   });
 }
 
-// Run on initial load
 document.addEventListener("astro:page-load", initWorkPreviews);
-// Run after any view transition
 document.addEventListener("astro:after-swap", initWorkPreviews);
