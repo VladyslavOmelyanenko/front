@@ -1,8 +1,4 @@
-
-
 function initNav(instantInit = false) {
-  
-  
   const nav = document.getElementById("navBar");
   if (!nav) return;
 
@@ -40,8 +36,8 @@ function initNav(instantInit = false) {
     }
 
     if (instant) {
-      highlight.offsetHeight; // force reflow
-      highlight.style.transition = ""; // restore animations
+      highlight.offsetHeight;
+      highlight.style.transition = "";
     }
   }
 
@@ -49,65 +45,53 @@ function initNav(instantInit = false) {
     requestAnimationFrame(() => {
       const index = computeIndex(window.location.pathname);
 
-      // Remove old active states
       items.forEach((li) => li.querySelector("a").classList.remove("active"));
 
-      // Apply new active state
       if (index >= 0 && items[index]) {
         items[index].querySelector("a").classList.add("active");
       }
 
       applyHighlight(index, instant);
     });
+
     nav.style.pointerEvents = "none";
-    requestAnimationFrame(() => {
-      nav.style.pointerEvents = "";
-    });
+    requestAnimationFrame(() => (nav.style.pointerEvents = ""));
   }
 
- items.forEach((li, index) => {
-   li.onmouseenter = () => applyHighlight(index);
- });
+  items.forEach((li, index) => {
+    li.onmouseenter = () => applyHighlight(index);
+  });
 
- nav.onmouseleave = () => updateForCurrentPath(false);
+  nav.onmouseleave = () => updateForCurrentPath(false);
+  window.onresize = () => updateForCurrentPath(true);
 
- window.onresize = () => updateForCurrentPath(true);
-
-  // Initial placement
   updateForCurrentPath(instantInit);
 }
 
-// REAL RELOAD → normal animation (instantInit = false)
+// REAL RELOAD → normal animation
 document.addEventListener("astro:page-load", () => initNav(false));
 
-// CLIENT NAVIGATION → avoid slide-from-zero (instantInit = true)
+// ===========================================
+// OPTION A FIX — DISABLE HOVER DURING SWITCH
+// ===========================================
 document.addEventListener("astro:after-swap", () => {
+  const nav = document.getElementById("navBar");
+  if (!nav) return;
+
+  // Prevent color flicker during transition
+  nav.classList.add("nav-disable-hover");
+
   initNav(true);
 
-  // force browser to re-evaluate hover state
+  // remove the protection on next frame AFTER highlight is placed
+  requestAnimationFrame(() => {
+    nav.classList.remove("nav-disable-hover");
+  });
+
+  // force browser to reset ghost hover state on mobile
   const evt = new MouseEvent("mousemove", { bubbles: true });
   document.dispatchEvent(evt);
 });
 
-
 // --- NAV HIDE ON SCROLL ---
 let lastScrollY = window.scrollY;
-
-function handleScrollHideNav() {
-  const nav = document.getElementById("navBar");
-  if (!nav) return;
-
-  const current = window.scrollY;
-
-  if (current > lastScrollY) {
-    // scrolling down → hide nav
-    nav.classList.add("nav-bar--hidden");
-  } else {
-    // scrolling up → show nav
-    nav.classList.remove("nav-bar--hidden");
-  }
-
-  lastScrollY = current;
-}
-
-window.addEventListener("scroll", handleScrollHideNav, { passive: true });
