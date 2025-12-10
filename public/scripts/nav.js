@@ -72,23 +72,18 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
     applyHighlight(parts, index, instant);
   }
 
-  function updateNavForPath(path, { instant = false } = {}) {
-    const parts = getNavParts();
-    if (!parts) return;
+function updateNavForPath(path, { instant = false } = {}) {
+  const parts = getNavParts();
+  if (!parts) return;
 
-    const { nav, routes } = parts;
-    const index = computeIndex(path, routes);
+  const { routes } = parts;
+  const index = computeIndex(path, routes);
 
-    requestAnimationFrame(() => {
-      setActiveIndex(parts, index, { instant });
-
-      // Optional: temporary pointer-events guard
-      nav.style.pointerEvents = "none";
-      requestAnimationFrame(() => {
-        nav.style.pointerEvents = "";
-      });
-    });
-  }
+  requestAnimationFrame(() => {
+    setActiveIndex(parts, index, { instant });
+    // ❌ no pointerEvents toggling here
+  });
+}
 
   function initNav(instantInit = false) {
     const parts = getNavParts();

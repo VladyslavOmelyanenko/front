@@ -64,14 +64,14 @@ const routes = ["/works", "/about", "/blog"];
     transition: color 0.15s ease;
   }
 
-  /* hovered link is white */
-  .nav-bar a:hover {
-    color: #fff;
-  }
-
   /* when hovering nav: reset all non-active links to black */
   .nav-bar:hover a {
     color: #000;
+  }
+
+  /* hovered link is white (this must come AFTER the rule above) */
+  .nav-bar a:hover {
+    color: #fff;
   }
 
   /* ACTIVE LINK: always white, overrides everything */
