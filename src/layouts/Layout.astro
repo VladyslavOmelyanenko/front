@@ -33,7 +33,15 @@ const { title } = Astro.props;
     <ViewTransitions />
 
     <!-- Site navigation (persisted across transitions) -->
-    <Nav transition:persist />
+
+    {
+      Astro.url.pathname.startsWith("/works/") ||
+      Astro.url.pathname.startsWith("/blog/") ? (
+        <></>
+      ) : (
+        <Nav transition:persist />
+      )
+    }
 
     <!-- Only the main content transitions -->
     <main class="main-container">
@@ -61,8 +69,8 @@ const { title } = Astro.props;
   }
 
   .main-container {
-    width: 42%;
-    margin-left: 29%;
+    width: 570px;
+    margin-left: calc((100% - 570px) / 2);
     padding-bottom: 50px;
     padding-top: 132px;
   }

@@ -1,3 +1,5 @@
+@import "./variables";
+
 @font-face {
   font-family: "Neue Haas";
   src: url("/fonts/neue.woff2") format("woff2");
@@ -13,8 +15,8 @@ html {
 body {
   font-family: 'Neue Haas', -apple-system;
   // font-family: "Helvetica Neue", Arial, sans-serif;
-  font-size: 19px;
-  line-height: 1.2;
+  font-size: $fz;
+  line-height: $lh;
 }
 
 html,

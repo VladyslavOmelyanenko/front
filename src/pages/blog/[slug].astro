@@ -1,9 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import NavForPost from "../../components/NavForPost.astro";
 import Feed from "../../components/Feed.astro";
 import { client } from "../../lib/sanity.js";
 import Post from "../../components/Post.astro";
-import { getWorkPost as getPostBySlug } from "../../data/works"; // rename later if you like
+import { getWorkPost as getPostBySlug } from "../../data/works";
 
 export async function getStaticPaths() {
   const slugs = await client.fetch(`
@@ -24,14 +25,21 @@ if (!post) return Astro.redirect("/404");
 
 const postDate = (() => {
   const d = new Date(post.postDate);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}.${month}.${year}`;
+
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 })();
+
+// The logic:
+const displayTitle =
+  post.title && post.title.trim() !== "" ? post.title : postDate;
 ---
 
 <Layout title={`Dzastins Zavadzkis—${postDate}`}>
+  <NavForPost title={displayTitle} />
   <Feed>
     <Post post={post} />
   </Feed>

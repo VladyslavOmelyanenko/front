@@ -1,0 +1,289 @@
+---
+const { title } = Astro.props;
+const pathname = Astro.url.pathname;
+
+// determines base route like "/blog" or "/works"
+const parent = "/" + pathname.split("/")[1];
+const routes = ["/works", "/about", "/blog"];
+---
+
+<ul class="nav-post-wrapper">
+  <li>
+    <div class="nav-pill">
+      <!-- Default: title pill -->
+      <span class="nav-post-title">{title}</span>
+
+      <!-- Hover: full nav with highlight -->
+      <ul
+        class="nav-pill-menu"
+        id="postNav"
+        data-routes={JSON.stringify(routes)}
+      >
+        <div class="animation"></div>
+        <li><a href="/works">Works</a></li>
+        <li><a href="/about">About</a></li>
+        <li><a href="/blog">Blog</a></li>
+      </ul>
+    </div>
+  </li>
+
+  <li class="close-button-container">
+    <div class="highlight"></div>
+    <a class="close-button" href={parent}>&#10007;</a>
+  </li>
+</ul>
+
+<style lang="scss">
+  @import "../styles/_variables.scss";
+
+  /* Outer wrapper for post nav */
+  .nav-post-wrapper {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    list-style: none;
+    padding: 0;
+    padding-left: 50px;
+    margin: 0;
+    gap: 8px;
+    width: max-content;
+    z-index: 1000;
+    transition:
+      top 0.25s ease,
+      opacity 0.25s ease;
+  }
+
+  /* This pill should match .nav-bar visually (height, border, bg) */
+  .nav-pill {
+    background-color: $gray;
+    border: 3px solid $gray;
+    border-radius: $br;
+    padding: 0;
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    cursor: none;
+    position: relative;
+  }
+
+  /* Title-only state (initial width = title width) */
+  .nav-post-title {
+    padding: 0 14px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  /* Hidden full nav state (same link dimensions as main nav) */
+  .nav-pill-menu {
+    display: none; /* no space taken until hover */
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    height: 36px;
+    position: relative;
+  }
+
+  .nav-pill-menu li {
+    position: relative;
+    z-index: 1;
+    cursor: none;
+  }
+
+  .nav-pill-menu li a {
+    padding: 0 14px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    text-decoration: none;
+    white-space: nowrap;
+    position: relative;
+    z-index: 2;
+    transition: color 0.15s ease;
+    cursor: none;
+  }
+
+  /* Highlight bar inside the pill nav – matches main nav */
+  .nav-pill-menu .animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: #000;
+    border-radius: $br;
+    z-index: 0;
+    pointer-events: none;
+    width: 0;
+    transform: translateX(0);
+    transition:
+      transform 0.25s ease,
+      width 0.25s ease;
+  }
+
+  /* During "opening", don't animate the highlight – it just snaps in */
+  .nav-pill.nav-pill--opening .animation {
+    transition: none !important;
+  }
+
+  /* On hover: hide title, show nav links */
+  .nav-pill:hover .nav-post-title {
+    display: none;
+  }
+
+  .nav-pill:hover .nav-pill-menu {
+    display: inline-flex;
+  }
+
+  /* Hover colors like main nav */
+  .nav-pill-menu li a:hover {
+    color: #fff;
+  }
+
+  /* Close button wrapper */
+  .close-button-container {
+    width: 42px;
+    height: 42px;
+    position: relative;
+    overflow: hidden; /* clip rounded highlight */
+    border-radius: $br;
+    border: 3px solid $gray;
+    background-color: $gray;
+    cursor: none;
+  }
+
+  /* Hover highlight for close button */
+  .highlight {
+    position: absolute;
+    inset: 0; /* fill container */
+    background-color: transparent;
+    border-radius: $br;
+    z-index: 0; /* under the X */
+    transition: background-color 0.25s ease;
+  }
+
+  /* The X (always stays visible) */
+  .close-button {
+    position: relative; /* needed to escape highlight layer */
+    z-index: 2; /* always above highlight */
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    text-decoration: none;
+    cursor: none;
+  }
+
+  /* Hover effect */
+  .close-button-container:hover .highlight {
+    background-color: #000; /* pill-like dark highlight */
+  }
+
+  .close-button-container:hover .close-button {
+    color: #fff; /* ensures X stays visible */
+  }
+
+  /* Hide on scroll – use same class as main nav JS */
+  .nav-post-wrapper.nav-bar--hidden {
+    top: -80px;
+    opacity: 0;
+  }
+
+  @media (hover: none) {
+    /* On touch devices, just show title + X, no hover nav */
+    .nav-pill-menu {
+      display: none !important;
+    }
+
+    .nav-post-title {
+      display: flex;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Lightweight highlight logic for the post nav (id="postNav")
+  function initPostNav() {
+    const nav = document.getElementById("postNav");
+    if (!nav) return;
+
+    const items = Array.from(nav.querySelectorAll("li"));
+    const highlight = nav.querySelector(".animation");
+    const routes = JSON.parse(nav.dataset.routes || "[]");
+
+    if (!highlight || items.length === 0) return;
+
+    function cleanPath(path) {
+      return path === "/" ? "/" : path.replace(/\/+$/, "");
+    }
+
+    function computeIndex(path) {
+      const p = cleanPath(path);
+      if (p === "/") return -1;
+
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
+        if (p === route || p.startsWith(route + "/")) return i;
+      }
+      return -1;
+    }
+
+    function applyHighlight(index) {
+      if (index < 0 || !items[index]) {
+        highlight.style.width = "0px";
+        highlight.style.transform = "translateX(0px)";
+      } else {
+        const li = items[index];
+        highlight.style.width = `${li.offsetWidth}px`;
+        highlight.style.transform = `translateX(${li.offsetLeft}px)`;
+      }
+    }
+
+    function updateForCurrentPath() {
+      const index = computeIndex(window.location.pathname);
+      applyHighlight(index);
+    }
+
+    // Hover highlight per item – this is what makes it slide between links
+    items.forEach((li, index) => {
+      li.addEventListener("mouseenter", () => applyHighlight(index));
+    });
+
+    // When the pill is hovered (nav appears), snap highlight in place
+    const pill = nav.closest(".nav-pill");
+    if (pill) {
+      pill.addEventListener("mouseenter", () => {
+        pill.classList.add("nav-pill--opening");
+        updateForCurrentPath(); // snap to current route, no slide
+        requestAnimationFrame(() => {
+          // re-enable transitions for hover movement
+          pill.classList.remove("nav-pill--opening");
+        });
+      });
+    }
+
+    // Initial placement (off-screen / hidden, but keeps state coherent)
+    updateForCurrentPath();
+
+    // On resize, recompute (without sliding wildly)
+    window.addEventListener("resize", () => {
+      pill?.classList.add("nav-pill--opening");
+      updateForCurrentPath();
+      requestAnimationFrame(() => {
+        pill?.classList.remove("nav-pill--opening");
+      });
+    });
+  }
+
+  document.addEventListener("astro:page-load", () => initPostNav());
+  document.addEventListener("astro:after-swap", () => initPostNav());
+</script>
