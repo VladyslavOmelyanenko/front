@@ -24,7 +24,10 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 </div>
 
 <style lang="scss">
-  @import "../styles/_variables.scss";
+  /* Remove this import once you define these globally:
+     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
+  */
+  /* @import "../styles/_variables.scss"; */
 
   .post-content {
     width: 100%;
@@ -58,14 +61,14 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     font-weight: normal;
     width: 100%;
     text-align: center;
-    border-radius: $br;
-    background-color: $gray;
+    border-radius: var(--br);
+    background-color: var(--gray);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: $lh * 10;
-    margin-top: $lh / 2;
-    margin-bottom: $lh / 2;
+    min-height: calc(var(--lh) * 10);
+    margin-top: calc(var(--lh) / 2);
+    margin-bottom: calc(var(--lh) / 2);
     padding: 8px 8px;
   }
 
@@ -76,8 +79,7 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   }
 
   :global(.post-content .footnote-text) {
-    color: $gray;
-    text-decoration: underline;
+    color: var(--footnote-gray);
     cursor: pointer;
   }
 
@@ -92,28 +94,30 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   }
 
   /* === DESKTOP MARGIN NOTE COLUMNS === */
-  :global(.post-content .footnote-layer--right) {
-    position: absolute;
-    top: 0;
-    left: 100%;
-    margin-left: 16px;
-    width: 20vw;
-    pointer-events: none;
-  }
-
+  :global(.post-content .footnote-layer--right),
   :global(.post-content .footnote-layer--left) {
     position: absolute;
     top: 0;
-    right: 100%;
-    margin-right: 16px;
-    width: 20vw;
+    width: calc((100vw - var(--column-width)) / 2 - 26px);
     pointer-events: none;
+    z-index: 10; /* keeps notes above most content */
+  }
+
+  :global(.post-content .footnote-layer--right) {
+    left: 100%;
+    margin-left: 13px;
+    text-align: left;
+  }
+
+  :global(.post-content .footnote-layer--left) {
+    right: 100%;
+    margin-right: 13px;
     text-align: right;
   }
 
   :global(.post-content .margin-note) {
     position: absolute;
-    color: $gray;
+    color: var(--footnote-gray);
     transform: translateY(0.15em);
     opacity: 0;
     pointer-events: none;
@@ -125,9 +129,10 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     text-align: left;
   }
 
+  /* FIX: left notes should be right-aligned */
   :global(.post-content .margin-note--left) {
     right: 0;
-    text-align: right;
+    text-align: left;
   }
 
   :global(.post-content .margin-note--visible) {
@@ -145,12 +150,11 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 
     :global(.post-content .inline-footnote) {
       display: block;
-      margin-top: $lh / 2;
-      margin-bottom: $lh / 2;
+      margin-top: calc(var(--lh) / 2);
+      margin-bottom: calc(var(--lh) / 2);
       padding: 8px;
-      // background: $gray;
-      color: $gray;
-      border-radius: $br;
+      color: var(--gray);
+      border-radius: var(--br);
       margin-left: 5%;
     }
   }

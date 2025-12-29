@@ -1,4 +1,11 @@
-@import "./variables";
+:root {
+  --br: 3px;
+  --gray: #e9e9e9;
+  --fz: 22px;
+  --lh: 25px;
+  --footnote-gray: #969696;
+  --column-width: 780px;
+}
 
 @font-face {
   font-family: "Neue Haas";
@@ -9,14 +16,13 @@
 }
 
 html {
-    font-synthesis: none;
+  font-synthesis: none;
 }
 
 body {
-  font-family: 'Neue Haas', -apple-system;
-  // font-family: "Helvetica Neue", Arial, sans-serif;
-  font-size: $fz;
-  line-height: $lh;
+  font-family: "Neue Haas", -apple-system, system-ui, sans-serif;
+  font-size: var(--fz);
+  line-height: var(--lh);
 }
 
 html,
@@ -25,38 +31,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-
-/* define your custom animations */
-@keyframes slide-out {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
+@media (max-width: 1140px) {
+:root {
+    --column-width: 580px;
   }
 }
 
-@keyframes slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
+@media (max-width: 980px) {
+  :root {
+    --column-width: 450px;
   }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* old view slides out to the left */
-::view-transition-old(root) {
-  animation: slide-out 0.4s ease both;
-}
-
-/* new view slides in from the right */
-::view-transition-new(root) {
-  animation: slide-in 0.4s ease both;
 }

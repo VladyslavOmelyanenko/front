@@ -31,7 +31,10 @@ const initialImages = thumbUrls.slice(0, 3);
 </a>
 
 <style lang="scss">
-  @import "../styles/_variables.scss";
+  /* Remove this import once you define these globally:
+     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
+  */
+  /* @import "../styles/_variables.scss"; */
 
   @keyframes ticker {
     0% {
@@ -50,8 +53,8 @@ const initialImages = thumbUrls.slice(0, 3);
     .work-title,
     .work-short-description,
     .work-year {
-      border-radius: $br;
-      background-color: $gray;
+      border-radius: var(--br);
+      background-color: var(--gray);
       text-align: center;
       padding: 0 8px;
       display: flex;
@@ -66,7 +69,7 @@ const initialImages = thumbUrls.slice(0, 3);
       .ticker {
         display: inline-flex;
         white-space: nowrap;
-        animation: ticker var(--ticker-duration) linear infinite;
+        animation: ticker var(--ticker-duration, 12s) linear infinite;
         animation-play-state: paused;
       }
 
@@ -83,7 +86,7 @@ const initialImages = thumbUrls.slice(0, 3);
     .work-image {
       height: 100%;
       width: auto;
-      border-radius: $br;
+      border-radius: var(--br);
       border: 1.5px solid #d9d9d9;
       object-fit: cover;
     }
@@ -95,6 +98,7 @@ const initialImages = thumbUrls.slice(0, 3);
         flex: 1;
         min-width: 0;
       }
+
       .work-short-description {
         display: none !important;
       }

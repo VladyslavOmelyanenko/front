@@ -1,10 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { PortableText } from "@portabletext/react";
 import { urlFor } from "../lib/sanity";
 
 // Helper: extract width & height from Sanity asset _ref
 function getDimensionsFromRef(ref) {
-  // Example ref: "image-788af135ba38dea6af30389df3e60510c88ec723-2795x4193-jpg"
   if (!ref || typeof ref !== "string") return {};
   const parts = ref.split("-");
   const sizePart = parts[parts.length - 2]; // "2795x4193"
@@ -24,11 +23,8 @@ function SanityImage({ value }) {
   const ref = asset._ref || asset._id;
   if (!ref) return null;
 
-  // Build URL from the asset reference
   const src = urlFor({ _ref: ref }).width(1400).auto("format").url();
   const alt = value?.alt || value?.caption || "";
-
-  // Get intrinsic dimensions from the _ref string
   const { width, height } = getDimensionsFromRef(ref);
 
   return (
@@ -37,20 +33,12 @@ function SanityImage({ value }) {
       alt={alt}
       loading="lazy"
       decoding="async"
-      // Give the browser real, per-image dimensions
       width={width || undefined}
       height={height || undefined}
-      style={{
-        width: "100%",
-        height: "auto",
-        display: "block",
-        // 🔥 No forced aspectRatio like "16 / 9" here anymore
-      }}
+      style={{ width: "100%", height: "auto", display: "block" }}
     />
   );
 }
-
-
 
 // shared link renderer
 const LinkMark = ({ children, value }) => {
@@ -70,9 +58,7 @@ const LinkMark = ({ children, value }) => {
 
 // Footnote PortableText used INSIDE footnotes only – inline elements only
 const footnoteComponents = {
-  types: {
-    image: SanityImage, // <img> is phrasing → safe inside <p>
-  },
+  types: { image: SanityImage },
   block: {
     normal: ({ children }) => (
       <span className="fn-inline-block">{children}</span>
@@ -82,16 +68,12 @@ const footnoteComponents = {
     ),
     h1: ({ children }) => <span className="fn-inline-block">{children}</span>,
   },
-  marks: {
-    link: LinkMark,
-  },
+  marks: { link: LinkMark },
 };
 
 // Main body components
 const components = {
-  types: {
-    image: SanityImage,
-  },
+  types: { image: SanityImage },
   block: {
     h1: ({ children }) => <h1>{children}</h1>,
     normal: ({ children }) => <p className="pt-block">{children}</p>,
@@ -111,14 +93,16 @@ const components = {
 };
 
 export default function PostContent({ post }) {
+  const containerRef = useRef(null);
+
   useEffect(() => {
-    const container = document.querySelector(".post-content");
+    const container = containerRef.current;
     if (!container) return;
 
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    const mql = window.matchMedia("(max-width: 768px)");
+    let cleanupCurrentMode = null;
 
-    if (isMobile) {
-      // ---------- MOBILE: INLINE AFTER TEXT ----------
+    const setupMobile = () => {
       const footnotes = container.querySelectorAll(".footnote");
       let activeInline = null;
 
@@ -139,7 +123,6 @@ export default function PostContent({ post }) {
           e.preventDefault();
           e.stopPropagation();
 
-          // if already showing for this one, hide and exit
           if (
             activeInline &&
             activeInline.__host === fn &&
@@ -149,10 +132,8 @@ export default function PostContent({ post }) {
             return;
           }
 
-          // hide any previous
           hideInline();
 
-          // create new inline element
           const span = document.createElement("span");
           span.className = "inline-footnote";
           span.innerHTML = noteEl.innerHTML || "";
@@ -164,10 +145,8 @@ export default function PostContent({ post }) {
       });
 
       const clickOutside = (e) => {
-        if (
-          e.target.closest(".footnote") ||
-          e.target.closest(".inline-footnote")
-        )
+        const t = e.target;
+        if (t?.closest?.(".footnote") || t?.closest?.(".inline-footnote"))
           return;
         hideInline();
       };
@@ -175,10 +154,15 @@ export default function PostContent({ post }) {
       container.addEventListener("click", clickOutside);
 
       return () => {
+        hideInline();
         container.removeEventListener("click", clickOutside);
+        footnotes.forEach((fn) => {
+          fn.onclick = null;
+        });
       };
-    } else {
-      // ---------- DESKTOP: MARGIN NOTES ----------
+    };
+
+    const setupDesktop = () => {
       let rightLayer = container.querySelector(".footnote-layer--right");
       if (!rightLayer) {
         rightLayer = document.createElement("div");
@@ -193,16 +177,29 @@ export default function PostContent({ post }) {
         container.appendChild(leftLayer);
       }
 
+      // Persist which note is open across resizes/re-layouts
       let activeId = null;
 
-      function hideAllNotes() {
+      const hideAllNotes = () => {
         container
           .querySelectorAll(".margin-note--visible")
           .forEach((n) => n.classList.remove("margin-note--visible"));
-        activeId = null;
-      }
+      };
 
-      function layoutNotes() {
+      const closeAllNotes = () => {
+        hideAllNotes();
+        activeId = null;
+      };
+
+      const showActiveIfAny = () => {
+        if (activeId === null) return;
+        const target = container.querySelector(
+          `.margin-note[data-footnote-id="${activeId}"]`
+        );
+        target?.classList.add("margin-note--visible");
+      };
+
+      const layoutNotes = () => {
         rightLayer.innerHTML = "";
         leftLayer.innerHTML = "";
 
@@ -220,9 +217,7 @@ export default function PostContent({ post }) {
           const id = String(index);
 
           const div = document.createElement("div");
-          div.className = `margin-note ${
-            isRight ? "margin-note--right" : "margin-note--left"
-          }`;
+          div.className = `margin-note ${isRight ? "margin-note--right" : "margin-note--left"}`;
           div.innerHTML = noteEl.innerHTML || "";
           div.dataset.footnoteId = id;
           div.style.top = `${top}px`;
@@ -238,8 +233,15 @@ export default function PostContent({ post }) {
             e.stopPropagation();
 
             const alreadyActive = activeId === id;
+
+            // always hide visible notes first
             hideAllNotes();
-            if (alreadyActive) return;
+
+            // toggle off if clicking the same footnote
+            if (alreadyActive) {
+              activeId = null;
+              return;
+            }
 
             const target = container.querySelector(
               `.margin-note[data-footnote-id="${id}"]`
@@ -250,14 +252,18 @@ export default function PostContent({ post }) {
             }
           };
         });
-      }
+
+        // Re-show the previously open note after rebuilding on resize
+        showActiveIfAny();
+      };
 
       layoutNotes();
       window.addEventListener("resize", layoutNotes);
 
       const containerClickHandler = (e) => {
-        if (e.target.closest(".footnote")) return;
-        hideAllNotes();
+        const t = e.target;
+        if (t?.closest?.(".footnote")) return;
+        closeAllNotes();
       };
 
       container.addEventListener("click", containerClickHandler);
@@ -265,15 +271,45 @@ export default function PostContent({ post }) {
       return () => {
         window.removeEventListener("resize", layoutNotes);
         container.removeEventListener("click", containerClickHandler);
+
+        // clean footnote handlers
+        container.querySelectorAll(".footnote").forEach((fn) => {
+          fn.onclick = null;
+        });
+
+        // remove layers (optional, but keeps mode-switch clean)
+        rightLayer?.remove();
+        leftLayer?.remove();
       };
-    }
+    };
+
+    const setupForCurrentMode = () => {
+      cleanupCurrentMode?.();
+      cleanupCurrentMode = mql.matches ? setupMobile() : setupDesktop();
+    };
+
+    setupForCurrentMode();
+
+    // Switch behavior when crossing the breakpoint
+    const onMqlChange = () => setupForCurrentMode();
+    if (mql.addEventListener) mql.addEventListener("change", onMqlChange);
+    else mql.addListener(onMqlChange); // Safari fallback
+
+    return () => {
+      if (mql.removeEventListener)
+        mql.removeEventListener("change", onMqlChange);
+      else mql.removeListener(onMqlChange);
+
+      cleanupCurrentMode?.();
+      cleanupCurrentMode = null;
+    };
   }, [post]);
 
   return (
-    <>
-      {post.content && (
+    <div className="post-content" ref={containerRef}>
+      {post?.content && (
         <PortableText value={post.content} components={components} />
       )}
-    </>
+    </div>
   );
 }

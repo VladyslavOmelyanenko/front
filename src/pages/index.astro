@@ -163,7 +163,7 @@ const firstLow = lowResUrls[0] ?? null;
 <style lang="scss">
   .slideshow {
     position: fixed;
-    inset: 0; // top:0; right:0; bottom:0; left:0
+    inset: 0; /* top:0; right:0; bottom:0; left:0 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -177,14 +177,20 @@ const firstLow = lowResUrls[0] ?? null;
   .slideshow-image-secondary {
     width: 100vw;
     height: 100vh;
-    object-fit: cover; // center & cover screen
+    object-fit: cover; /* center & cover screen */
     display: block;
+
+    /* PERF: only animate opacity/transform (filter is expensive in Chrome) */
     transition:
       opacity 0.4s ease-out,
-      filter 0.3s ease-out,
       transform 0.3s ease-out;
+
     opacity: 1;
-    will-change: opacity, filter, transform;
+    will-change: opacity, transform;
+
+    /* helps Chrome keep this on its own layer */
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   /* Secondary is hidden on desktop, but still kept in sync/preloaded */
@@ -192,11 +198,12 @@ const firstLow = lowResUrls[0] ?? null;
     display: none;
   }
 
-  /* blurred low-res placeholder */
+  /* blurred low-res placeholder
+     NOTE: blur filters are expensive; keep, but reduce blur amount */
   .slideshow-image-primary.loading,
   .slideshow-image-secondary.loading {
-    filter: blur(10px);
-    transform: scale(1.02);
+    filter: blur(6px);
+    transform: translateZ(0) scale(1.02);
   }
 
   /* === Mobile: show both images stacked (current + next) === */
@@ -210,6 +217,14 @@ const firstLow = lowResUrls[0] ?? null;
       width: 100vw;
       height: 50vh;
       display: block;
+    }
+  }
+
+  /* Optional: users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .slideshow-image-primary,
+    .slideshow-image-secondary {
+      transition: none;
     }
   }
 </style>

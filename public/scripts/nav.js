@@ -30,27 +30,14 @@ if (!window.__NAV_SCRIPT_INITIALIZED__) {
     return -1;
   }
 
-  function applyHighlight(parts, index, instant = false) {
-    const { items, highlight } = parts;
-
-    if (instant) {
-      highlight.style.transition = "none";
-    }
-
+  function applyHighlight(index) {
     if (index < 0 || !items[index]) {
-      highlight.style.width = "0px";
-      highlight.style.transform = "translateX(0px)";
+      highlight.style.transform = "translate3d(0,0,0) scaleX(0)";
     } else {
       const li = items[index];
-      highlight.style.width = `${li.offsetWidth}px`;
-      highlight.style.transform = `translateX(${li.offsetLeft}px)`;
-    }
-
-    if (instant) {
-      // force reflow, then restore transitions
-      // eslint-disable-next-line no-unused-expressions
-      highlight.offsetHeight;
-      highlight.style.transition = "";
+      const w = li.offsetWidth;
+      const x = li.offsetLeft;
+      highlight.style.transform = `translate3d(${x}px,0,0) scaleX(${w})`;
     }
   }
 
