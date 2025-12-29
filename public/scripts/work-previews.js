@@ -1,11 +1,11 @@
 function initWorkPreviews() {
   const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-  const SPEED_DESKTOP = 150;
+  const SPEED_DESKTOP = 100;
   const SPEED_MOBILE = 60;
   const SPEED = isMobile ? SPEED_MOBILE : SPEED_DESKTOP;
 
-  const ROTATE_INTERVAL_DESKTOP = 300;
+  const ROTATE_INTERVAL_DESKTOP = 350;
   const ROTATE_INTERVAL_MOBILE = 600; 
   const ROTATE_INTERVAL = isMobile
     ? ROTATE_INTERVAL_MOBILE

@@ -44,6 +44,15 @@ const { blogPost } = Astro.props;
     gap: 10px;
     height: 42px;
 
+    &:hover {
+      .blog-title,
+      .blog-author,
+      .blog-short-description,
+      .blog-date {
+        background-color: var(--highlight-gray);
+      }
+    }
+
     .blog-title,
     .blog-author,
     .blog-short-description,

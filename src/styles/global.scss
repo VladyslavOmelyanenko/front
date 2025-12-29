@@ -1,6 +1,7 @@
 :root {
   --br: 3px;
-  --gray: #e9e9e9;
+  --gray: #cecece;
+  --highlight-gray: #e6e6e6;
   --fz: 22px;
   --lh: 25px;
   --footnote-gray: #969696;
@@ -41,4 +42,14 @@ body {
   :root {
     --column-width: 450px;
   }
+}
+
+::-moz-selection {
+  color: #ff0000;
+  background: none;
+}
+
+::selection {
+  color: #ff0000;
+  background: none;
 }

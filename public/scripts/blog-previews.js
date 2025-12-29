@@ -1,7 +1,7 @@
 console.log('fajkldfjlakjflks');
 
 function initBlogPreviews() {
-  const SPEED = 150; // px/s
+  const SPEED = 100; // px/s
 
   document.querySelectorAll("[data-ticker]").forEach((ticker) => {
     // fully rebuild the ticker to avoid stale state

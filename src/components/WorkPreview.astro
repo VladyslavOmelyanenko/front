@@ -50,6 +50,14 @@ const initialImages = thumbUrls.slice(0, 3);
     display: flex;
     gap: 10px;
 
+    &:hover {
+      .work-title,
+      .work-short-description,
+      .work-year {
+        background-color: var(--highlight-gray);
+      }
+    }
+
     .work-title,
     .work-short-description,
     .work-year {

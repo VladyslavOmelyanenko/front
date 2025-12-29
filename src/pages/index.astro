@@ -17,25 +17,16 @@ export async function getHomepageImages() {
 
 const data = await getHomepageImages();
 const images = data?.featuredImages ?? [];
-
-// keep only valid assets
 const assets = images.filter((img) => img && img.asset);
 
-// build hi-res & low-res URLs on the server (Astro)
 const hiResUrls = assets.map((img) =>
-  urlFor(img.asset)
-    .width(1920) // adjust if you like
-    .height(1080)
-    .fit("max") // keep aspect ratio, no crop
-    .quality(85)
-    .url()
+  urlFor(img.asset).width(1920).height(1080).fit("max").quality(85).url()
 );
 
 const lowResUrls = assets.map((img) =>
   urlFor(img.asset).width(64).height(64).fit("max").quality(20).url()
 );
 
-// simple first placeholder (real start index is randomized on the client)
 const firstLow = lowResUrls[0] ?? null;
 ---
 
@@ -48,7 +39,7 @@ const firstLow = lowResUrls[0] ?? null;
     {
       firstLow && (
         <img
-          class="slideshow-image slideshow-image-primary loading"
+          class="slideshow-image slideshow-image-primary loading is-visible"
           src={firstLow}
           alt="Featured slide"
           loading="lazy"
@@ -66,14 +57,13 @@ const firstLow = lowResUrls[0] ?? null;
     const primary = gallery.querySelector(".slideshow-image-primary");
     if (!primary) return;
 
-    // Always create a secondary image.
-    // On desktop it's hidden by CSS; on mobile it's shown under the first.
+    // Create secondary image (used for crossfade)
     const secondary = primary.cloneNode(false);
     secondary.removeAttribute("src");
     secondary.classList.remove("slideshow-image-primary");
     secondary.classList.add("slideshow-image-secondary");
     secondary.classList.remove("loading");
-    secondary.style.opacity = "0";
+    secondary.classList.remove("is-visible");
     gallery.appendChild(secondary);
 
     let hi = [];
@@ -89,73 +79,72 @@ const firstLow = lowResUrls[0] ?? null;
 
     if (!hi.length) return;
 
-    // 🔀 Random starting index on the client
     let currentIndex = Math.floor(Math.random() * hi.length);
     let nextIndex =
       hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
+
+    // which element is currently visible?
+    let front = primary; // visible
+    let back = secondary; // hidden
 
     function preload(idx) {
       const pre = new Image();
       pre.src = hi[idx];
     }
 
-    function showPair(a, b) {
-      const lowA = low[a];
-      const hiA = hi[a];
-      const lowB = low[b];
-      const hiB = hi[b];
+    function setImg(el, idx) {
+      const lowSrc = low[idx];
+      const hiSrc = hi[idx];
 
-      // start transition: fade both out
-      primary.classList.add("loading");
-      secondary.classList.add("loading");
-      primary.style.opacity = "0";
-      secondary.style.opacity = "0";
+      // low-res first (optional), then swap to hi-res when loaded
+      if (lowSrc) {
+        el.classList.add("loading");
+        el.src = lowSrc;
+      }
 
-      // low-res placeholders immediately
-      if (lowA) primary.src = lowA;
-      if (lowB) secondary.src = lowB;
-
-      const hiImgA = new Image();
-      const hiImgB = new Image();
-
-      hiImgA.src = hiA;
-      hiImgA.onload = () => {
-        primary.src = hiA;
-        primary.classList.remove("loading");
-        requestAnimationFrame(() => {
-          primary.style.opacity = "1";
-        });
+      const hiImg = new Image();
+      hiImg.src = hiSrc;
+      hiImg.onload = () => {
+        el.src = hiSrc;
+        el.classList.remove("loading");
       };
-
-      hiImgB.src = hiB;
-      hiImgB.onload = () => {
-        secondary.src = hiB;
-        secondary.classList.remove("loading");
-        requestAnimationFrame(() => {
-          secondary.style.opacity = "1";
-        });
-      };
-
-      // Preload the one after `b`
-      const preloadIndex = (b + 1) % hi.length;
-      preload(preloadIndex);
     }
 
-    // initial pair
-    showPair(currentIndex, nextIndex);
+    function crossfadeTo(idx) {
+      // Load next into the hidden layer
+      setImg(back, idx);
+
+      // Crossfade: back becomes visible, front becomes hidden
+      back.classList.add("is-visible");
+      front.classList.remove("is-visible");
+
+      // Swap references
+      const tmp = front;
+      front = back;
+      back = tmp;
+    }
+
+    // Initial: show current on front, preload next
+    setImg(front, currentIndex);
+    if (hi.length > 1) preload(nextIndex);
 
     gallery.addEventListener("click", () => {
-      // slide the window:
-      // new current = old next
-      // new next = next after that
+      if (!hi.length) return;
+
+      // Crossfade to next
+      crossfadeTo(nextIndex);
+
+      // advance indices
       currentIndex = nextIndex;
       nextIndex = (nextIndex + 1) % hi.length;
-      showPair(currentIndex, nextIndex);
+
+      // preload the one after next
+      preload(nextIndex);
     });
 
     window.addEventListener("resize", () => {
-      // re-show current pair on resize; helps when crossing mobile/desktop breakpoint
-      showPair(currentIndex, nextIndex);
+      // keep current visible on resize; no forced re-crossfade
+      // (optional: you can re-set sources if you need)
     });
   })();
 </script>
@@ -163,64 +152,62 @@ const firstLow = lowResUrls[0] ?? null;
 <style lang="scss">
   .slideshow {
     position: fixed;
-    inset: 0; /* top:0; right:0; bottom:0; left:0 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    inset: 0;
     background: #000;
     cursor: pointer;
     z-index: 999;
     overflow: hidden;
   }
 
+  /* Desktop: layer images on top of each other for crossfade */
   .slideshow-image-primary,
   .slideshow-image-secondary {
+    position: absolute;
+    inset: 0;
     width: 100vw;
     height: 100vh;
-    object-fit: cover; /* center & cover screen */
+    object-fit: cover;
     display: block;
 
-    /* PERF: only animate opacity/transform (filter is expensive in Chrome) */
-    transition:
-      opacity 0.4s ease-out,
-      transform 0.3s ease-out;
+    /* ✅ crossfade 6s ease-in-out */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    will-change: opacity;
+  }
 
+  .slideshow-image-primary.is-visible,
+  .slideshow-image-secondary.is-visible {
     opacity: 1;
-    will-change: opacity, transform;
-
-    /* helps Chrome keep this on its own layer */
-    transform: translateZ(0);
-    backface-visibility: hidden;
   }
 
-  /* Secondary is hidden on desktop, but still kept in sync/preloaded */
-  .slideshow-image-secondary {
-    display: none;
-  }
-
-  /* blurred low-res placeholder
-     NOTE: blur filters are expensive; keep, but reduce blur amount */
+  /* Optional: keep your "loading" look (no transition on blur; just a state) */
   .slideshow-image-primary.loading,
   .slideshow-image-secondary.loading {
     filter: blur(6px);
-    transform: translateZ(0) scale(1.02);
+    transform: scale(1.02);
   }
 
   /* === Mobile: show both images stacked (current + next) === */
   @media (max-width: 768px) {
     .slideshow {
+      display: flex;
       flex-direction: column;
     }
 
     .slideshow-image-primary,
     .slideshow-image-secondary {
+      position: static; /* stop layering */
       width: 100vw;
       height: 50vh;
+      opacity: 1; /* always visible when stacked */
+      transition: none; /* no crossfade in stacked mode */
+    }
+
+    .slideshow-image-secondary {
       display: block;
     }
   }
 
-  /* Optional: users who prefer reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .slideshow-image-primary,
     .slideshow-image-secondary {

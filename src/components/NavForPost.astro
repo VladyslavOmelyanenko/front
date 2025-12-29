@@ -4,41 +4,22 @@ const pathname = Astro.url.pathname;
 
 // determines base route like "/blog" or "/works"
 const parent = "/" + pathname.split("/")[1];
-const routes = ["/works", "/about", "/blog"];
 ---
 
 <ul class="nav-post-wrapper">
   <li>
     <div class="nav-pill">
-      <!-- Default: title pill -->
       <span class="nav-post-title">{title}</span>
-
-      <!-- Hover: full nav with highlight -->
-      <ul
-        class="nav-pill-menu"
-        id="postNav"
-        data-routes={JSON.stringify(routes)}
-      >
-        <div class="animation"></div>
-        <li><a href="/works">Works</a></li>
-        <li><a href="/about">About</a></li>
-        <li><a href="/blog">Blog</a></li>
-      </ul>
     </div>
   </li>
 
   <li class="close-button-container">
     <div class="highlight"></div>
-    <a class="close-button" href={parent}>&#10007;</a>
+    <a class="close-button" href={parent} aria-label="Close post">&#10007;</a>
   </li>
 </ul>
 
 <style lang="scss">
-  /* Remove this import once you define these globally:
-     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
-  */
-  /* @import "../styles/_variables.scss"; */
-
   /* Outer wrapper for post nav */
   .nav-post-wrapper {
     position: fixed;
@@ -67,11 +48,9 @@ const routes = ["/works", "/about", "/blog"];
     display: inline-flex;
     align-items: stretch;
     overflow: hidden;
-    cursor: none;
     position: relative;
   }
 
-  /* Title-only state (initial width = title width) */
   .nav-post-title {
     padding: 0 14px;
     height: 36px;
@@ -80,76 +59,6 @@ const routes = ["/works", "/about", "/blog"];
     justify-content: center;
     color: #000;
     white-space: nowrap;
-    z-index: 2;
-  }
-
-  /* Hidden full nav state (same link dimensions as main nav) */
-  .nav-pill-menu {
-    display: none; /* no space taken until hover */
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    height: 36px;
-    position: relative;
-  }
-
-  .nav-pill-menu li {
-    position: relative;
-    z-index: 1;
-    cursor: none;
-  }
-
-  .nav-pill-menu li a {
-    padding: 0 14px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #000;
-    text-decoration: none;
-    white-space: nowrap;
-    position: relative;
-    z-index: 2;
-    transition: color 0.15s ease;
-    cursor: none;
-  }
-
-  /* Highlight bar inside the pill nav – matches main nav (PERF: transform only) */
-  .nav-pill-menu .animation {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background: #000;
-    border-radius: var(--br);
-    z-index: 0;
-    pointer-events: none;
-
-    /* avoid animating width (janky in Chrome) */
-    width: 1px;
-    transform-origin: left center;
-    transform: translate3d(0, 0, 0) scaleX(0);
-    will-change: transform;
-    transition: transform 0.25s ease;
-  }
-
-  /* During "opening", don't animate the highlight – it just snaps in */
-  .nav-pill.nav-pill--opening .animation {
-    transition: none !important;
-  }
-
-  /* On hover: hide title, show nav links */
-  .nav-pill:hover .nav-post-title {
-    display: none;
-  }
-
-  .nav-pill:hover .nav-pill-menu {
-    display: inline-flex;
-  }
-
-  /* Hover colors like main nav */
-  .nav-pill-menu li a:hover {
-    color: #fff;
   }
 
   /* Close button wrapper */
@@ -161,13 +70,13 @@ const routes = ["/works", "/about", "/blog"];
     border-radius: var(--br);
     border: 3px solid var(--gray);
     background-color: var(--gray);
-    cursor: none;
+    cursor: pointer;
   }
 
   /* Hover highlight for close button */
   .highlight {
     position: absolute;
-    inset: 0; /* fill container */
+    inset: 0;
     background-color: transparent;
     border-radius: var(--br);
     z-index: 0; /* under the X */
@@ -176,8 +85,8 @@ const routes = ["/works", "/about", "/blog"];
 
   /* The X (always stays visible) */
   .close-button {
-    position: relative; /* needed to escape highlight layer */
-    z-index: 2; /* always above highlight */
+    position: relative;
+    z-index: 2;
     height: 100%;
     width: 100%;
     display: flex;
@@ -185,110 +94,18 @@ const routes = ["/works", "/about", "/blog"];
     justify-content: center;
     color: #000;
     text-decoration: none;
-    cursor: none;
   }
 
   /* Hover effect */
   .close-button-container:hover .highlight {
-    background-color: #000; /* pill-like dark highlight */
+    background-color: var(--highlight-gray);
   }
 
-  .close-button-container:hover .close-button {
-    color: #fff; /* ensures X stays visible */
-  }
 
-  /* Hide on scroll – use same class as main nav JS */
+
+  /* Hide on scroll – uses same class as main nav JS */
   .nav-post-wrapper.nav-bar--hidden {
     top: -80px;
     opacity: 0;
   }
-
-  @media (hover: none) {
-    /* On touch devices, just show title + X, no hover nav */
-    .nav-pill-menu {
-      display: none !important;
-    }
-
-    .nav-post-title {
-      display: flex;
-    }
-  }
 </style>
-
-<script is:inline>
-  // Lightweight highlight logic for the post nav (id="postNav")
-  function initPostNav() {
-    const nav = document.getElementById("postNav");
-    if (!nav) return;
-
-    const items = Array.from(nav.querySelectorAll("li"));
-    const highlight = nav.querySelector(".animation");
-    const routes = JSON.parse(nav.dataset.routes || "[]");
-
-    if (!highlight || items.length === 0) return;
-
-    function cleanPath(path) {
-      return path === "/" ? "/" : path.replace(/\/+$/, "");
-    }
-
-    function computeIndex(path) {
-      const p = cleanPath(path);
-      if (p === "/") return -1;
-
-      for (let i = 0; i < routes.length; i++) {
-        const route = routes[i];
-        if (p === route || p.startsWith(route + "/")) return i;
-      }
-      return -1;
-    }
-
-    function applyHighlight(index) {
-      if (index < 0 || !items[index]) {
-        highlight.style.width = "0px";
-        highlight.style.transform = "translateX(0px)";
-      } else {
-        const li = items[index];
-        highlight.style.width = `${li.offsetWidth}px`;
-        highlight.style.transform = `translateX(${li.offsetLeft}px)`;
-      }
-    }
-
-    function updateForCurrentPath() {
-      const index = computeIndex(window.location.pathname);
-      applyHighlight(index);
-    }
-
-    // Hover highlight per item – this is what makes it slide between links
-    items.forEach((li, index) => {
-      li.addEventListener("mouseenter", () => applyHighlight(index));
-    });
-
-    // When the pill is hovered (nav appears), snap highlight in place
-    const pill = nav.closest(".nav-pill");
-    if (pill) {
-      pill.addEventListener("mouseenter", () => {
-        pill.classList.add("nav-pill--opening");
-        updateForCurrentPath(); // snap to current route, no slide
-        requestAnimationFrame(() => {
-          // re-enable transitions for hover movement
-          pill.classList.remove("nav-pill--opening");
-        });
-      });
-    }
-
-    // Initial placement (off-screen / hidden, but keeps state coherent)
-    updateForCurrentPath();
-
-    // On resize, recompute (without sliding wildly)
-    window.addEventListener("resize", () => {
-      pill?.classList.add("nav-pill--opening");
-      updateForCurrentPath();
-      requestAnimationFrame(() => {
-        pill?.classList.remove("nav-pill--opening");
-      });
-    });
-  }
-
-  document.addEventListener("astro:page-load", () => initPostNav());
-  document.addEventListener("astro:after-swap", () => initPostNav());
-</script>
