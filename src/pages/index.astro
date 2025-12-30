@@ -57,7 +57,6 @@ const firstLow = lowResUrls[0] ?? null;
     const primary = gallery.querySelector(".slideshow-image-primary");
     if (!primary) return;
 
-    // Create secondary image (used for crossfade)
     const secondary = primary.cloneNode(false);
     secondary.removeAttribute("src");
     secondary.classList.remove("slideshow-image-primary");
@@ -83,9 +82,8 @@ const firstLow = lowResUrls[0] ?? null;
     let nextIndex =
       hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
 
-    // which element is currently visible?
-    let front = primary; // visible
-    let back = secondary; // hidden
+    let front = primary;
+    let back = secondary;
 
     function preload(idx) {
       const pre = new Image();
@@ -96,7 +94,6 @@ const firstLow = lowResUrls[0] ?? null;
       const lowSrc = low[idx];
       const hiSrc = hi[idx];
 
-      // low-res first (optional), then swap to hi-res when loaded
       if (lowSrc) {
         el.classList.add("loading");
         el.src = lowSrc;
@@ -111,41 +108,50 @@ const firstLow = lowResUrls[0] ?? null;
     }
 
     function crossfadeTo(idx) {
-      // Load next into the hidden layer
       setImg(back, idx);
-
-      // Crossfade: back becomes visible, front becomes hidden
       back.classList.add("is-visible");
       front.classList.remove("is-visible");
-
-      // Swap references
       const tmp = front;
       front = back;
       back = tmp;
     }
 
-    // Initial: show current on front, preload next
-    setImg(front, currentIndex);
-    if (hi.length > 1) preload(nextIndex);
+    function next() {
+      if (hi.length <= 1) return;
 
-    gallery.addEventListener("click", () => {
-      if (!hi.length) return;
-
-      // Crossfade to next
       crossfadeTo(nextIndex);
 
-      // advance indices
       currentIndex = nextIndex;
       nextIndex = (nextIndex + 1) % hi.length;
 
-      // preload the one after next
       preload(nextIndex);
+    }
+
+    // Initial
+    front.classList.add("is-visible");
+    setImg(front, currentIndex);
+    preload(nextIndex);
+
+    // Click to advance
+    gallery.addEventListener("click", next);
+
+    // ✅ Auto-advance every 3 seconds
+    const intervalMs = 3000;
+    let timer = setInterval(next, intervalMs);
+
+    // Optional: pause on hover (desktop)
+    gallery.addEventListener("mouseenter", () => clearInterval(timer));
+    gallery.addEventListener("mouseleave", () => {
+      timer = setInterval(next, intervalMs);
     });
 
-    window.addEventListener("resize", () => {
-      // keep current visible on resize; no forced re-crossfade
-      // (optional: you can re-set sources if you need)
-    });
+    // Cleanup if Astro swaps pages
+    const cleanup = () => {
+      clearInterval(timer);
+      gallery.removeEventListener("click", next);
+    };
+
+    document.addEventListener("astro:before-swap", cleanup, { once: true });
   })();
 </script>
 
@@ -171,7 +177,7 @@ const firstLow = lowResUrls[0] ?? null;
 
     /* ✅ crossfade 6s ease-in-out */
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
     will-change: opacity;
   }
 
