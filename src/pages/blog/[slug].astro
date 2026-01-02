@@ -8,7 +8,7 @@ import { getWorkPost as getPostBySlug } from "../../data/works";
 
 export async function getStaticPaths() {
   const slugs = await client.fetch(`
-    *[_type == "post" && defined(slug.current) && !(_id in path("drafts.**"))]{
+    *[_type == "post" && postType == "blog" && defined(slug.current) && !(_id in path("drafts.**"))]{
       "slug": slug.current
     }
   `);
@@ -23,9 +23,43 @@ const { postSlug } = Astro.props;
 const post = await getPostBySlug(postSlug);
 if (!post) return Astro.redirect("/404");
 
-const postDate = (() => {
-  const d = new Date(post.postDate);
+// Force blog-only navigation neighbors
+const baseDate = post.postDate ?? post._createdAt;
 
+const neighbors = await client.fetch(
+  `
+  {
+    "prev": *[_type=="post"
+      && postType == "blog"
+      && defined(slug.current)
+      && !(_id in path("drafts.**"))
+      && coalesce(postDate, _createdAt) < $d]
+      | order(coalesce(postDate, _createdAt) desc)[0]{
+        title,
+        "slug": slug.current,
+        postDate
+      },
+
+    "next": *[_type=="post"
+      && postType == "blog"
+      && defined(slug.current)
+      && !(_id in path("drafts.**"))
+      && coalesce(postDate, _createdAt) > $d]
+      | order(coalesce(postDate, _createdAt) asc)[0]{
+        title,
+        "slug": slug.current,
+        postDate
+      }
+  }
+  `,
+  { d: baseDate }
+);
+
+const prev = neighbors?.prev ?? null;
+const next = neighbors?.next ?? null;
+
+const postDate = (() => {
+  const d = new Date(post.postDate ?? post._createdAt);
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -33,7 +67,6 @@ const postDate = (() => {
   });
 })();
 
-// The logic:
 const displayTitle =
   post.title && post.title.trim() !== "" ? post.title : postDate;
 ---
@@ -42,5 +75,60 @@ const displayTitle =
   <NavForPost title={displayTitle} />
   <Feed>
     <Post post={post} />
+
+    <nav class="post-pagination" aria-label="Blog post navigation">
+      {
+        prev ? (
+          <a class="page-btn prev" href={`/blog/${prev.slug}`}>
+            ← {prev.title || "Previous"}
+          </a>
+        ) : (
+          <span class="page-btn disabled">← Previous</span>
+        )
+      }
+
+      {
+        next ? (
+          <a class="page-btn next" href={`/blog/${next.slug}`}>
+            {next.title || "Next"} →
+          </a>
+        ) : (
+          <span class="page-btn disabled">Next →</span>
+        )
+      }
+    </nav>
   </Feed>
 </Layout>
+
+<style lang="scss">
+  .post-pagination {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .page-btn {
+    background: var(--gray);
+    border-radius: var(--br);
+    padding: 0px 14px;
+    height: 42px;
+    text-decoration: none;
+    color: #000;
+    display: inline-flex;
+    align-items: center;
+    max-width: 48%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .page-btn:hover {
+    background: var(--highlight-gray);
+  }
+
+  .page-btn.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+</style>

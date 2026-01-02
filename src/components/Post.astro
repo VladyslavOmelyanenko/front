@@ -3,18 +3,28 @@ import PostContent from "../components/PostContent.jsx";
 
 const { post } = Astro.props;
 
-const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
+const dateText = (() => {
+  if (post.postType === "about") return null;
+
+  const d = new Date(post.postDate);
+
+  if (post.postType === "work") {
+    return String(d.getFullYear());
+  }
+
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+})();
 ---
 
 <div>
-  <div class="title-bar">
+  {post.postType != 'about' && <div class="title-bar">
     <h2>{post.title}</h2>
-    <p>{postDate}</p>
-  </div>
+    {dateText && <p>{dateText}</p>}
+  </div>}
 
   <div class="post-content">
     <div class="post-body">
@@ -25,7 +35,7 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 
 <style lang="scss">
   /* Remove this import once you define these globally:
-     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
+     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; --footnote-gray: rgb(150,150,150); --column-width: 780px; }
   */
   /* @import "../styles/_variables.scss"; */
 
@@ -43,8 +53,14 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
 
   :global(.post-content img) {
     width: 100%;
-    margin: 8px 0;
     border-radius: 4px;
+  }
+
+  /* override for PT images so wrapper controls spacing */
+  :global(.post-content .pt-image img) {
+    margin: 0 !important;
+    border-radius: var(--br);
+    cursor: zoom-in;
   }
 
   :global(.post-content p) {
@@ -120,10 +136,8 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
   :global(.post-content .margin-note) {
     position: absolute;
     color: var(--footnote-gray);
-    transform: translateY(0.15em);
-    opacity: 0;
+    display: none; /* ✅ no scroll-space when closed */
     pointer-events: none;
-    transition: opacity 0.2s ease-out;
   }
 
   :global(.post-content .margin-note--right) {
@@ -131,19 +145,118 @@ const postDate = new Date(post.postDate).toLocaleDateString("en-US", {
     text-align: left;
   }
 
-  /* FIX: left notes should be right-aligned */
   :global(.post-content .margin-note--left) {
     right: 0;
     text-align: left;
   }
 
   :global(.post-content .margin-note--visible) {
+    display: block; /* ✅ only takes space when open */
+    opacity: 1; /* optional */
+  }
+
+  :global(.post-content .pt-carousel) {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    margin: 12px 0;
+
+    /* container rounding */
+    border-radius: var(--br);
+    overflow: hidden;
+  }
+
+  :global(.post-content .pt-carousel-img) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+
+    /* IMPORTANT: cancel your global img margins */
+    margin: 0 !important;
+
+    /* radius on the image itself */
+    border-radius: var(--br);
+
+    transition: opacity 0.6s ease-in-out; /* or whatever you set in JS */
+    will-change: opacity;
+  }
+
+  :global(.post-content .pt-carousel-img.is-visible) {
     opacity: 1;
+  }
+
+  /* horizontal: fill the box */
+  :global(.post-content .pt-carousel-img.fit-cover) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* vertical: shrink-to-fit + center so radius affects the visible image */
+  :global(.post-content .pt-carousel-img.fit-contain) {
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+
+    /* center the narrower image */
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  :global(html.pt-no-scroll),
+  :global(body.pt-no-scroll) {
+    overflow: hidden;
+  }
+
+  :global(.pt-lightbox) {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    place-items: center;
+  }
+
+  :global(.pt-lightbox.is-open) {
+    display: grid;
+  }
+
+  :global(.pt-lightbox__backdrop) {
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  :global(.pt-lightbox__img) {
+    position: relative;
+    z-index: 1;
+    border-radius: var(--br);
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: zoom-out;
+  }
+
+  /* horizontal: prefer width */
+  :global(.pt-lightbox__img.is-horizontal) {
+    max-width: 90vw;
+    max-height: 90vh;
+  }
+
+  /* vertical: prefer height (your “90% of height”) */
+  :global(.pt-lightbox__img.is-vertical) {
+    max-height: 90vh;
+    max-width: 90vw;
   }
 
   /* === MOBILE: INLINE FOOTNOTES AFTER TEXT === */
   @media (max-width: 768px) {
-    /* don't ever show side layers / margin notes on phone */
     :global(.post-content .footnote-layer--right),
     :global(.post-content .footnote-layer--left),
     :global(.post-content .margin-note) {

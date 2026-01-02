@@ -5,7 +5,9 @@
   --fz: 22px;
   --lh: 25px;
   --footnote-gray: #969696;
-  --column-width: 780px;
+  --column-width: 780px;--img-h-s: calc(var(--lh) * 6);
+  --img-h-m: calc(var(--lh) * 12);
+  --img-h-l: calc(var(--lh) * 18);
 }
 
 @font-face {

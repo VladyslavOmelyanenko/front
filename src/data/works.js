@@ -49,7 +49,7 @@ export async function getWorkPost(slug) {
         title,
         "slug": slug.current,
         postDate,
-
+        postType,
         postImage{
           asset,                // <-- KEEP _ref!
           "url": asset->url,
@@ -90,7 +90,7 @@ export async function getAboutPost() {
           title,
           "slug": slug.current,
           postDate,
-
+          postType,
           postImage{
             asset->{
               url,
