@@ -1,52 +1,52 @@
 ---
 const { blogPost } = Astro.props;
+
+const dateText = (() => {
+  const d = new Date(blogPost.postDate);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+})();
 ---
 
 <a href={"/blog/" + blogPost.slug}>
   <div class="blog-preview">
-    <span class="blog-date">
-      {
-        (() => {
-          const d = new Date(blogPost.postDate);
-          const day = String(d.getDate()).padStart(2, "0");
-          const month = String(d.getMonth() + 1).padStart(2, "0");
-          const year = d.getFullYear();
-          return `${day}.${month}.${year}`;
-        })()
-      }
-    </span>
+    <h2 class="blog-title">{blogPost.title}</h2>
+    <span class="blog-date">{dateText}</span>
 
     <p class="blog-short-description">
       <span class="ticker" data-ticker>
-        <span class="ticker-text">{blogPost.postDescription}</span>
+        <span class="t1">{blogPost.postDescription}</span>
+        <span class="t2">{blogPost.postDescription}</span>
       </span>
     </p>
+
   </div>
 </a>
 
 <style lang="scss">
   /* Remove this import once you define these in a global CSS file:
-     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
+     :root { --br: 3px; --gray: #e9e9e9; --highlight-gray: #c8c8c8; }
   */
   /* @import "../styles/_variables.scss"; */
 
   @keyframes ticker {
     0% {
-      transform: translate3d(0, 0, 0);
+      transform: translateX(0);
     }
     100% {
-      transform: translate3d(-50%, 0, 0);
+      transform: translateX(-50%);
     }
   }
 
   .blog-preview {
+    height: 42px;
     display: flex;
     gap: 10px;
-    height: 42px;
 
     &:hover {
       .blog-title,
-      .blog-author,
       .blog-short-description,
       .blog-date {
         background-color: var(--highlight-gray);
@@ -54,38 +54,50 @@ const { blogPost } = Astro.props;
     }
 
     .blog-title,
-    .blog-author,
     .blog-short-description,
     .blog-date {
-      background: var(--gray);
       border-radius: var(--br);
+      background-color: var(--gray);
       text-align: center;
+      padding: 0 8px;
       display: flex;
       align-items: center;
-      padding: 0 8px;
       white-space: nowrap;
+
+      /* ✅ this is important for “shrinking like work preview” */
+      min-width: 0;
       overflow: hidden;
+    }
+
+    .blog-title {
+      flex: 0 0 auto; /* ✅ don’t shrink the title pill */
+      width: max-content; /* ✅ size to its content */
+      max-width: 45%; /* ✅ but don’t let it take the whole row */
+      min-width: 160px; /* ✅ prevents tiny pills */
+      margin: 0; /* because h2 */
     }
 
     .blog-short-description {
       flex: 1 1 auto;
       min-width: 0;
+      overflow: hidden;
       position: relative;
 
       .ticker {
         display: inline-flex;
         white-space: nowrap;
-        will-change: transform;
-      }
-
-      .ticker-text {
-        padding-right: 40px;
-      }
-
-      .ticker--scrolling {
         animation: ticker var(--ticker-duration, 12s) linear infinite;
         animation-play-state: paused;
       }
+
+      .t1,
+      .t2 {
+        padding-right: 40px;
+      }
+    }
+
+    &:hover .blog-short-description .ticker {
+      animation-play-state: running;
     }
 
     .blog-date {
@@ -93,14 +105,22 @@ const { blogPost } = Astro.props;
       width: 120px;
       justify-content: center;
     }
-
-    &:hover .blog-short-description .ticker--scrolling {
-      animation-play-state: running;
-    }
   }
 
   @media (max-width: 768px) {
-    .blog-preview .blog-short-description .ticker--scrolling {
+    .blog-preview {
+      .blog-title {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .blog-short-description {
+        display: none !important;
+      }
+    }
+
+    /* keep ticker running on mobile if you ever show it */
+    .blog-preview .blog-short-description .ticker {
       animation-play-state: running !important;
     }
   }

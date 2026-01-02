@@ -33,15 +33,7 @@ const { title } = Astro.props;
     <ViewTransitions />
 
     <!-- Site navigation (persisted across transitions) -->
-
-    {
-      Astro.url.pathname.startsWith("/works/") ||
-      Astro.url.pathname.startsWith("/blog/") ? (
-        <></>
-      ) : (
-        <Nav transition:persist />
-      )
-    }
+    <Nav transition:persist />
 
     <!-- Only the main content transitions -->
     <main class="main-container">
