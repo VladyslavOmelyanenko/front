@@ -1,7 +1,22 @@
 import { client } from "../lib/sanity.js";
 
 /* -------------------------------------------------------
+   Common fragments
+------------------------------------------------------- */
+const CAPTIONED_IMAGE = `
+  {
+    asset,
+    alt,
+    caption,
+    "url": asset->url,
+    "metadata": asset->metadata{dimensions}
+  }
+`;
+
+/* -------------------------------------------------------
    Fetch MULTIPLE POSTS (list page)
+   NOTE: this query is weird structurally (homepage doc -> field[]-> posts)
+   Kept the same behavior, just updated image shapes.
 ------------------------------------------------------- */
 export async function getPosts(type, field) {
   try {
@@ -13,20 +28,23 @@ export async function getPosts(type, field) {
         postDescription,
         postAuthor,
 
-        // MAIN POST IMAGE
-        postImage{
-          asset,                                   // keep the _ref here
-          "url": asset->url,
-          "metadata": asset->metadata{dimensions}
+        // MAIN POST IMAGE (captionedImage)
+        "postImage": postImage ${CAPTIONED_IMAGE},
+
+        // INLINE CONTENT IMAGES (contentImage wrapper)
+        "images": content[_type == "contentImage"]{
+          _key,
+          size,
+          "image": image ${CAPTIONED_IMAGE}
         },
 
-        // INLINE CONTENT IMAGES
-        "images": content[_type == "image"]{
-          _key,
-          alt,
-          asset,                                  // keep the _ref here too
-          "url": asset->url,
-          "metadata": asset->metadata{dimensions}
+        // CAROUSEL PREVIEW (optional: first image + count)
+        "carousel": content[_type == "carousel"][0]{
+          "count": count(images),
+          "first": images[0] ${CAPTIONED_IMAGE},
+          intervalMs,
+          crossfadeMs,
+          cursorPointer
         }
       } | order(postDate desc)`,
       { type }
@@ -50,23 +68,29 @@ export async function getWorkPost(slug) {
         "slug": slug.current,
         postDate,
         postType,
-        postImage{
-          asset,                // <-- KEEP _ref!
-          "url": asset->url,
-          "metadata": asset->metadata{dimensions}
-        },
+
+        // MAIN POST IMAGE (captionedImage)
+        "postImage": postImage ${CAPTIONED_IMAGE},
 
         postDescription,
 
         content[]{
           ...,
-          _type == "image" => {
+
+          // INLINE CONTENT IMAGE BLOCK (contentImage)
+          _type == "contentImage" => {
             _key,
-            alt,
-            asset,              // <-- MUST be ONLY asset, not asset->{...}
-            "url": asset->url,
-            "metadata": asset->metadata{dimensions}
+            size,
+            "image": image ${CAPTIONED_IMAGE}
+          },
+
+          // CAROUSEL BLOCK (images are captionedImage)
+          _type == "carousel" => {
+            ...,
+            images[] ${CAPTIONED_IMAGE}
           }
+
+          // Footnote images remain plain "image" inside annotations; ignored here
         }
       }`,
       { slug }
@@ -81,6 +105,8 @@ export async function getWorkPost(slug) {
 
 /* -------------------------------------------------------
    Fetch the ABOUT PAGE post
+   (Your schema earlier shows about as a postType, but you have an about doc.
+    Kept your structure, just updated image shapes.)
 ------------------------------------------------------- */
 export async function getAboutPost() {
   try {
@@ -91,23 +117,24 @@ export async function getAboutPost() {
           "slug": slug.current,
           postDate,
           postType,
-          postImage{
-            asset->{
-              url,
-              metadata { dimensions }
-            }
-          },
+
+          // MAIN POST IMAGE (captionedImage)
+          "postImage": postImage ${CAPTIONED_IMAGE},
 
           postDescription,
 
           content[]{
             ...,
 
-            _type == "image" => {
+            _type == "contentImage" => {
+              _key,
+              size,
+              "image": image ${CAPTIONED_IMAGE}
+            },
+
+            _type == "carousel" => {
               ...,
-              asset,
-              "url": asset->url,
-              "metadata": asset->metadata{dimensions}
+              images[] ${CAPTIONED_IMAGE}
             }
           }
         }

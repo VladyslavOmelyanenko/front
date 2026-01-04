@@ -12,7 +12,13 @@ const dateText = (() => {
 
 <a href={"/blog/" + blogPost.slug}>
   <div class="blog-preview">
-    <h2 class="blog-title">{blogPost.title}</h2>
+    <h2 class="blog-title">
+      <span class="ticker" data-ticker>
+        <span class="t1">{blogPost.title}</span>
+        <span class="t2">{blogPost.title}</span>
+      </span>
+    </h2>
+
     <span class="blog-date">{dateText}</span>
 
     <p class="blog-short-description">
@@ -21,16 +27,10 @@ const dateText = (() => {
         <span class="t2">{blogPost.postDescription}</span>
       </span>
     </p>
-
   </div>
 </a>
 
 <style lang="scss">
-  /* Remove this import once you define these in a global CSS file:
-     :root { --br: 3px; --gray: #e9e9e9; --highlight-gray: #c8c8c8; }
-  */
-  /* @import "../styles/_variables.scss"; */
-
   @keyframes ticker {
     0% {
       transform: translateX(0);
@@ -63,17 +63,15 @@ const dateText = (() => {
       display: flex;
       align-items: center;
       white-space: nowrap;
-
-      /* ✅ this is important for “shrinking like work preview” */
       min-width: 0;
       overflow: hidden;
     }
 
     .blog-title {
-      flex: 0 0 auto; /* ✅ don’t shrink the title pill */
-      width: max-content; /* ✅ size to its content */
-      max-width: 45%; /* ✅ but don’t let it take the whole row */
-      min-width: 160px; /* ✅ prevents tiny pills */
+      flex: 0 0 auto;
+      width: max-content;
+      max-width: 45%;
+      min-width: 160px;
       margin: 0; /* because h2 */
     }
 
@@ -82,22 +80,31 @@ const dateText = (() => {
       min-width: 0;
       overflow: hidden;
       position: relative;
-
-      .ticker {
-        display: inline-flex;
-        white-space: nowrap;
-        animation: ticker var(--ticker-duration, 12s) linear infinite;
-        animation-play-state: paused;
-      }
-
-      .t1,
-      .t2 {
-        padding-right: 40px;
-      }
     }
 
-    &:hover .blog-short-description .ticker {
-      animation-play-state: running;
+    /* =========================
+     TICKER (final behavior)
+     - JS adds .ticker--scrolling ONLY when cut off
+     - Desktop: runs ONLY on hover
+     - Touch: runs automatically
+  ========================= */
+
+    .ticker {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: none; /* no motion unless scrolling */
+      animation-play-state: paused; /* paused by default */
+    }
+
+    .ticker.ticker--scrolling {
+      animation: ticker var(--ticker-duration, 12s) linear infinite;
+      animation-play-state: paused;
+    }
+
+    /* gap only when scrolling (prevents weird right gap when not animating) */
+    .ticker.ticker--scrolling .t1,
+    .ticker.ticker--scrolling .t2 {
+      padding-right: 40px;
     }
 
     .blog-date {
@@ -107,21 +114,51 @@ const dateText = (() => {
     }
   }
 
+  /* Desktop: animate only on hover */
+  @media (hover: hover) and (pointer: fine) {
+    .blog-preview:hover .ticker.ticker--scrolling {
+      animation-play-state: running;
+    }
+  }
+
+  /* Touch devices: run automatically (remove if you don't want auto-run on mobile) */
+  @media (hover: none) {
+    .ticker.ticker--scrolling {
+      animation-play-state: running;
+    }
+  }
+
   @media (max-width: 768px) {
     .blog-preview {
-      .blog-title {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .blog-short-description {
-        display: none !important;
-      }
+      gap: 8px;
     }
 
-    /* keep ticker running on mobile if you ever show it */
-    .blog-preview .blog-short-description .ticker {
+    /* Title pill hugs text (no extra space) */
+    .blog-preview .blog-title {
+      flex: 0 0 auto;
+      width: max-content;
+      max-width: 100%;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden; /* ✅ keep tidy if it still overflows */
+      text-overflow: ellipsis; /* optional */
+    }
+
+    .blog-preview .blog-date {
+      display: none;
+    }
+
+    /* Description takes remaining room and can be cut off + ticker */
+    .blog-preview .blog-short-description {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    /* ✅ Mobile: run tickers automatically (but only when JS added ticker--scrolling) */
+    .blog-preview .ticker.ticker--scrolling {
       animation-play-state: running !important;
     }
+
+    /* keep the gap rule as-is (only applies while scrolling) */
   }
 </style>

@@ -21,10 +21,14 @@ const dateText = (() => {
 ---
 
 <div>
-  {post.postType != 'about' && <div class="title-bar">
-    <h2>{post.title}</h2>
-    {dateText && <p>{dateText}</p>}
-  </div>}
+  {
+    post.postType != "about" && (
+      <div class="title-bar">
+        <h2>{post.title}</h2>
+        {dateText && <p>{dateText}</p>}
+      </div>
+    )
+  }
 
   <div class="post-content">
     <div class="post-body">
@@ -93,7 +97,8 @@ const dateText = (() => {
   /* === SHARED FOOTNOTE STYLES === */
 
   :global(.post-content .pt-block) {
-    position: relative;
+    margin: 0 0 calc(var(--lh) / 2);
+    white-space: pre-wrap;
   }
 
   :global(.post-content .footnote-text) {
@@ -138,6 +143,7 @@ const dateText = (() => {
     color: var(--footnote-gray);
     display: none; /* ✅ no scroll-space when closed */
     pointer-events: none;
+    max-width: 350px;
   }
 
   :global(.post-content .margin-note--right) {
@@ -159,7 +165,6 @@ const dateText = (() => {
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
-    margin: 12px 0;
 
     /* container rounding */
     border-radius: var(--br);
@@ -253,6 +258,30 @@ const dateText = (() => {
   :global(.pt-lightbox__img.is-vertical) {
     max-height: 90vh;
     max-width: 90vw;
+  }
+
+  :global(.post-content .pt-caption) {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 2px;
+    font-size: calc(var(--fz) * 0.6);
+    color: var(--footnote-gray);
+  }
+
+  :global(.post-content .pt-carousel-btn) {
+    all: unset;
+    position: absolute;
+    z-index: 6;
+    // padding: 8px 10px;
+    line-height: 1;
+    cursor: zoom-in;
+  }
+
+  :global(.post-content .pt-carousel-btn .material-symbols-outlined) {
+    font-size: 30px;
+    line-height: 1;
+    color: var(--gray);
   }
 
   /* === MOBILE: INLINE FOOTNOTES AFTER TEXT === */

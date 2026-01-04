@@ -1,46 +1,53 @@
-console.log('fajkldfjlakjflks');
-
 function initBlogPreviews() {
   const SPEED = 100; // px/s
+  const GAP = 40; // must match CSS padding-right
 
-  document.querySelectorAll("[data-ticker]").forEach((ticker) => {
-    // fully rebuild the ticker to avoid stale state
-    const container = ticker.parentElement;
-    const original = ticker.querySelector(".ticker-text");
-    if (!original || !container) return;
+  document.querySelectorAll(".ticker[data-ticker]").forEach((ticker) => {
+    const pill = ticker.closest(".blog-title, .blog-short-description");
+    if (!pill) return;
 
-    // Save original text
-    const text = original.textContent;
+    const original = ticker.querySelector(".t1");
+    if (!original) return;
 
-    // Clear ticker completely and rebuild
+    const text = original.textContent || "";
+
+    // rebuild clean: single copy, NO gap by default
     ticker.innerHTML = "";
-    const textEl = document.createElement("span");
-    textEl.className = "ticker-text";
-    textEl.textContent = text;
-    ticker.appendChild(textEl);
+    const base = document.createElement("span");
+    base.className = "t1";
+    base.textContent = text;
+    ticker.appendChild(base);
 
-    // Wait until layout has stabilized
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const textWidth = textEl.scrollWidth;
-        const containerWidth = container.offsetWidth;
+        const pillWidth = pill.clientWidth;
+        const textWidth = base.scrollWidth;
 
-        // If text fits → no scrolling
-        if (textWidth <= containerWidth) return;
+        // ✅ only animate when actually cut off
+        const isCutOff = textWidth > pillWidth;
 
-        // Clone second copy
-        const clone = textEl.cloneNode(true);
-        ticker.appendChild(clone);
+        if (!isCutOff) {
+          ticker.classList.remove("ticker--scrolling");
+          ticker.style.removeProperty("--ticker-duration");
+          return;
+        }
 
-        const duration = textWidth / SPEED;
-
-        // Reset animation (important!)
-        ticker.style.animation = "none";
-        ticker.offsetHeight; // force reflow
-        ticker.style.animation = "";
-
-        ticker.style.setProperty("--ticker-duration", `${duration}s`);
+        // enable scrolling mode (adds CSS gap)
         ticker.classList.add("ticker--scrolling");
+
+        // build enough repeats for smooth loop
+        const target = pillWidth * 2;
+        const copiesNeeded = Math.max(2, Math.ceil(target / (textWidth + GAP)));
+
+        for (let i = 1; i < copiesNeeded; i++) {
+          const copy = base.cloneNode(true);
+          copy.className = i === 1 ? "t2" : "t1";
+          ticker.appendChild(copy);
+        }
+
+        // constant speed
+        const duration = (textWidth + GAP) / SPEED;
+        ticker.style.setProperty("--ticker-duration", `${duration}s`);
       });
     });
   });
@@ -48,3 +55,4 @@ function initBlogPreviews() {
 
 document.addEventListener("astro:page-load", initBlogPreviews);
 document.addEventListener("astro:after-swap", initBlogPreviews);
+window.addEventListener("resize", initBlogPreviews);

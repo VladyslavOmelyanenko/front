@@ -3,19 +3,30 @@ import { urlFor } from "../lib/sanity.js";
 
 const { value } = Astro.props;
 
-// pull the asset object from the block
-const asset = value?.asset;
-
-// Sanity requires either _ref or _id
-const ref = asset?._ref ?? asset?._id ?? null;
+// Support these shapes:
+// 1) contentImage: { _type:"contentImage", size, image:{asset, alt, caption} }
+// 2) captionedImage or plain image: { asset, alt, caption }
+const img = value?.image ?? value ?? null;
+const asset = img?.asset ?? null;
 
 let src = "";
-if (ref) {
-  // This is the ONLY correct value to pass to urlFor
-  src = urlFor({ _ref: ref }).width(1200).auto("format").url();
+if (asset) {
+  // urlFor can take an asset ref/object (recommended)
+  src = urlFor(asset).width(1200).auto("format").url();
 }
 
-const alt = value?.alt || value?.caption || "";
+const alt = img?.alt || img?.caption || "";
+const caption = img?.caption || null;
+
+// Optional: size for layout hooks (only exists on contentImage)
+const size = value?._type === "contentImage" ? value?.size : null;
 ---
 
-{src && <img src={src} alt={alt} loading="lazy" />}
+{
+  src && (
+    <figure class={size ? `content-image size-${size}` : "content-image"}>
+      <img src={src} alt={alt} loading="lazy" />
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  )
+}

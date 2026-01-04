@@ -1,38 +1,67 @@
 // nav.js
-// Minimal nav behavior: hide/show on scroll.
-// No active link logic, no highlight animation, no Astro transition syncing.
+// Hide/show nav on scroll, Safari-bounce safe.
 
 (function initNavOnce() {
   if (window.__NAV_SCRIPT_INITIALIZED__) return;
   window.__NAV_SCRIPT_INITIALIZED__ = true;
 
-  let lastScrollY = window.scrollY;
+  let lastY = Math.max(0, window.scrollY || 0);
+  let ticking = false;
 
-function handleScrollHideNav() {
-  const navBar = document.getElementById("navBar");
-  const postNav = document.querySelector(".nav-post-wrapper");
+  // Tune these:
+  const DELTA_PX = 6; // ignore tiny jitter
+  const TOP_LOCK_PX = 24; // never hide when near very top
+  const SHOW_ON_BOUNCE_TOP = true;
 
-  const current = window.scrollY;
+  function setHidden(hidden) {
+    const navBar = document.getElementById("navBar");
+    const postNav = document.querySelector(".nav-post-wrapper");
+    if (navBar) navBar.classList.toggle("nav-bar--hidden", hidden);
+    if (postNav) postNav.classList.toggle("nav-bar--hidden", hidden);
+  }
 
-  const shouldHide = current > lastScrollY;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
 
-  if (navBar) navBar.classList.toggle("nav-bar--hidden", shouldHide);
-  if (postNav) postNav.classList.toggle("nav-bar--hidden", shouldHide);
+    requestAnimationFrame(() => {
+      ticking = false;
 
-  lastScrollY = current;
-}
+      // Clamp: Safari can report negative scrollY during rubber-band
+      const rawY = window.scrollY || 0;
+      const y = Math.max(0, rawY);
 
-  window.addEventListener("scroll", handleScrollHideNav, { passive: true });
+      // Always show at/near top (prevents weird hide on bounce)
+      if (y <= TOP_LOCK_PX) {
+        setHidden(false);
+        lastY = y;
+        return;
+      }
 
-  // If you use Astro view transitions, the DOM can swap without a full reload.
-  // This keeps the state correct after swaps.
-  document.addEventListener("astro:after-swap", () => {
-    lastScrollY = window.scrollY;
-    handleScrollHideNav();
-  });
+      // Ignore jitter
+      const dy = y - lastY;
+      if (Math.abs(dy) < DELTA_PX) return;
 
-  document.addEventListener("astro:page-load", () => {
-    lastScrollY = window.scrollY;
-    handleScrollHideNav();
-  });
+      // If user scrolls down => hide, up => show
+      if (dy > 0) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+
+      lastY = y;
+    });
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  // Keep state correct after Astro swaps
+  function resync() {
+    lastY = Math.max(0, window.scrollY || 0);
+    if (SHOW_ON_BOUNCE_TOP && lastY <= TOP_LOCK_PX) setHidden(false);
+    onScroll();
+  }
+
+  document.addEventListener("astro:after-swap", resync);
+  document.addEventListener("astro:page-load", resync);
 })();

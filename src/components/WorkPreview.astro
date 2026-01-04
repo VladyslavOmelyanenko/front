@@ -3,11 +3,16 @@ import { urlFor } from "../lib/sanity.js";
 
 const { workPost } = Astro.props;
 
-// Get *thumb URLs* from Sanity image assets
+// New shape from query:
+// workPost.images = [{ _key, size, image: { asset, url, metadata, alt, caption } }, ...]
 const images = workPost.images ?? [];
-const thumbUrls = images.map(
-  (img) => urlFor(img.asset).width(200).url() // same aspect ratio, max width 200px
-);
+
+// Build *thumb URLs* from Sanity assets (max width 200px)
+const thumbUrls = images
+  .map((item) => item?.image?.asset)
+  .filter(Boolean)
+  .map((asset) => urlFor(asset).width(200).auto("format").url());
+
 const initialImages = thumbUrls.slice(0, 3);
 ---
 
@@ -22,20 +27,17 @@ const initialImages = thumbUrls.slice(0, 3);
       </span>
     </p>
 
-    {initialImages.map((url) => <img class="work-image" src={url} />)}
+    {
+      initialImages.map((url) => (
+        <img class="work-image" src={url} loading="lazy" />
+      ))
+    }
 
-    <span class="work-year">
-      {new Date(workPost.postDate).getFullYear()}
-    </span>
+    <span class="work-year">{new Date(workPost.postDate).getFullYear()}</span>
   </div>
 </a>
 
 <style lang="scss">
-  /* Remove this import once you define these globally:
-     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; }
-  */
-  /* @import "../styles/_variables.scss"; */
-
   @keyframes ticker {
     0% {
       transform: translateX(0);

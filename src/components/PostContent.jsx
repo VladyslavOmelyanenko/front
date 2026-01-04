@@ -1,45 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PortableText } from "@portabletext/react";
 import { urlFor } from "../lib/sanity";
 
-// Helper: extract width & height from Sanity asset _ref
-function getDimensionsFromRef(ref) {
-  if (!ref || typeof ref !== "string") return {};
-  const parts = ref.split("-");
-  const sizePart = parts[parts.length - 2]; // "2795x4193"
-  if (!sizePart) return {};
-  const [wStr, hStr] = sizePart.split("x");
-  const width = parseInt(wStr, 10);
-  const height = parseInt(hStr, 10);
-  if (!width || !height) return {};
-  return { width, height };
-}
-
 // Image renderer for PortableText
 function SanityImage({ value }) {
-  const asset = value?.asset;
+  // Supports:
+  // - contentImage: { _type:"contentImage", size, image:{asset, alt, caption} }
+  // - plain image/captionedImage: { asset, alt, caption }
+  const img = value?.image ?? value;
+  const asset = img?.asset;
   if (!asset) return null;
 
-  const ref = asset._ref || asset._id;
-  if (!ref) return null;
+  const size =
+    value?._type === "contentImage" ? value?.size || "l" : value?.size || "l";
+  const src = urlFor(asset).width(1800).auto("format").quality(85).url();
 
-  const size = value?.size || "l"; // "s" | "m" | "l"
-  const src = urlFor({ _ref: ref })
-    .width(1800)
-    .auto("format")
-    .quality(85)
-    .url();
-  const alt = value?.alt || value?.caption || "";
+  const alt = img?.alt || img?.caption || "";
+  const caption = img?.caption || null;
 
   const widthPct = size === "s" ? "33.333%" : size === "m" ? "66.666%" : "100%";
 
   return (
     <figure
       className={`pt-image pt-image--${size}`}
-      style={{
-        width: widthPct,
-        margin: "8px auto", // centered for s/m
-      }}
+      style={{ width: widthPct, margin: "8px auto" }}
     >
       <img
         src={src}
@@ -48,21 +32,24 @@ function SanityImage({ value }) {
         decoding="async"
         style={{
           width: "100%",
-          height: "auto", // ✅ natural height
-          objectFit: "contain", // doesn’t crop
+          height: "auto",
+          objectFit: "contain",
           display: "block",
           borderRadius: "var(--br)",
         }}
       />
+      {caption && <figcaption className="pt-caption">{caption}</figcaption>}
     </figure>
   );
 }
 
-
-
 // shared link renderer
 const LinkMark = ({ children, value }) => {
-  const href = value?.href || "#";
+  const href = value?.href;
+
+  // ✅ no href -> no link (prevents scroll-to-top)
+  if (!href) return <>{children}</>;
+
   const isExternal = href.startsWith("http");
   return (
     <a
@@ -76,7 +63,7 @@ const LinkMark = ({ children, value }) => {
   );
 };
 
-// Footnote PortableText used INSIDE footnotes only – inline elements only
+// Footnote PortableText used INSIDE footnotes only
 const footnoteComponents = {
   types: { image: SanityImage },
   block: {
@@ -91,13 +78,18 @@ const footnoteComponents = {
   marks: { link: LinkMark },
 };
 
-// ✅ Carousel block renderer (Portable Text block object: _type === "carousel")
 function CarouselBlock({ value }) {
   const rootRef = useRef(null);
+  const btnRef = useRef(null);
+  const currentRef = useRef({ src: "", alt: "" });
+  const [caption, setCaption] = useState("");
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || root.__inited) return;
+    const btn = btnRef.current;
+    if (!root || !btn) return;
+
+    if (root.__inited) return;
     root.__inited = true;
 
     const crossfadeMs = Number(value?.crossfadeMs ?? 6000);
@@ -106,16 +98,24 @@ function CarouselBlock({ value }) {
     const imgs = Array.from(root.querySelectorAll(".pt-carousel-img"));
     if (imgs.length < 2) return;
 
-    const refs =
+    const items =
       (value?.images || [])
-        .map((img) => img?.asset?._ref || img?.asset?._id)
+        .map((img) => {
+          const ref = img?.asset?._ref || img?.asset?._id;
+          if (!ref) return null;
+          return {
+            url: urlFor({ _ref: ref })
+              .width(1920)
+              .auto("format")
+              .quality(85)
+              .url(),
+            caption: img?.caption || "",
+            alt: img?.alt || img?.caption || "",
+          };
+        })
         .filter(Boolean) || [];
 
-    const urls = refs.map((ref) =>
-      urlFor({ _ref: ref }).width(1920).auto("format").quality(85).url()
-    );
-
-    if (!urls.length) return;
+    if (!items.length) return;
 
     root.style.cursor = cursorPointer ? "pointer" : "default";
     imgs.forEach((img) => {
@@ -126,12 +126,11 @@ function CarouselBlock({ value }) {
     let front = imgs[0];
     let back = imgs[1];
     let locked = false;
+    let currentImgEl = front;
 
-    // make sure both start hidden, then show the first
     front.classList.remove("is-visible");
     back.classList.remove("is-visible");
 
-    // Preload helper
     const preload = (url) =>
       new Promise((resolve, reject) => {
         const im = new Image();
@@ -146,66 +145,94 @@ function CarouselBlock({ value }) {
         im.src = url;
       });
 
-    // Init: load first image before showing
+    function applyFit(imgEl, w, h) {
+      const isHorizontal = w >= h;
+      imgEl.classList.toggle("fit-cover", isHorizontal);
+      imgEl.classList.toggle("fit-contain", !isHorizontal);
+    }
+
+    function setCurrent(i, imgElForPosition) {
+      setCaption(items[i]?.caption || "");
+      currentRef.current = {
+        src: items[i]?.url || "",
+        alt: items[i]?.alt || "",
+      };
+      if (imgElForPosition) {
+        currentImgEl = imgElForPosition;
+      }
+    }
+
+    // ✅ Position the button relative to the CURRENT image box
+    function positionBtnOn(imgEl) {
+      if (!imgEl || !btn) return;
+
+      const rImg = imgEl.getBoundingClientRect();
+      const rRoot = root.getBoundingClientRect();
+
+      const pad = 4; // distance from image edge
+      const left = rImg.left - rRoot.left + pad;
+      const top = rImg.bottom - rRoot.top - btn.offsetHeight - pad;
+
+      btn.style.left = `${left}px`;
+      btn.style.top = `${top}px`;
+    }
+
+    const onResize = () => positionBtnOn(currentImgEl);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+
     (async () => {
       try {
-        const loaded0 = await preload(urls[0]);
-        const isHorizontal0 = loaded0.w >= loaded0.h;
-
-        front.classList.toggle("fit-cover", isHorizontal0);
-        front.classList.toggle("fit-contain", !isHorizontal0);
-
+        const loaded0 = await preload(items[0].url);
+        applyFit(front, loaded0.w, loaded0.h);
         front.src = loaded0.url;
+        front.alt = items[0].alt || "";
+        setCurrent(0, front);
 
-        requestAnimationFrame(() => front.classList.add("is-visible"));
+        requestAnimationFrame(() => {
+          front.classList.add("is-visible");
+          requestAnimationFrame(() => positionBtnOn(front));
+        });
 
-        // warm up next (optional)
-        if (urls.length > 1) preload(urls[1]).catch(() => {});
-      } catch {
-        // ignore
-      }
+        if (items.length > 1) preload(items[1].url).catch(() => {});
+      } catch {}
     })();
+
     const advance = async () => {
-      if (urls.length <= 1) return;
+      if (items.length <= 1) return;
       if (locked) return;
       locked = true;
 
-      const next = (index + 1) % urls.length;
-      const nextUrl = urls[next];
+      const next = (index + 1) % items.length;
+      const nextItem = items[next];
 
       try {
-        // ✅ only switch once the next image is ready
-        const loaded = await preload(nextUrl);
-
-        // ✅ orientation-based fit
-        const isHorizontal = loaded.w >= loaded.h;
-        back.classList.toggle("fit-cover", isHorizontal);
-        back.classList.toggle("fit-contain", !isHorizontal);
-
+        const loaded = await preload(nextItem.url);
+        applyFit(back, loaded.w, loaded.h);
         back.src = loaded.url;
+        back.alt = nextItem.alt || "";
 
-        // crossfade after src is committed
         requestAnimationFrame(() => {
+          // place button on the incoming image immediately
+          positionBtnOn(back);
+
           back.classList.add("is-visible");
           front.classList.remove("is-visible");
 
-          // swap pointers
           const tmp = front;
           front = back;
           back = tmp;
-          index = next;
 
-          // keep the now-hidden "back" fully hidden
+          index = next;
+          setCurrent(index, front);
+
+          // keep the old one hidden for next round
           back.classList.remove("is-visible");
         });
 
-        // ✅ warm up the one after next to reduce future lag
-        const afterNext = urls[(next + 1) % urls.length];
-        preload(afterNext).catch(() => {});
-      } catch {
-        // if image fails, just unlock so user can try again
+        const afterNext = items[(next + 1) % items.length]?.url;
+        if (afterNext) preload(afterNext).catch(() => {});
       } finally {
-        // small delay prevents ultra-fast double clicks from fighting the fade
         setTimeout(() => {
           locked = false;
         }, 100);
@@ -216,29 +243,54 @@ function CarouselBlock({ value }) {
 
     return () => {
       root.removeEventListener("click", advance);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
       root.__inited = false;
     };
   }, [value]);
 
   return (
-    <div className="pt-carousel" ref={rootRef}>
-      <img className="pt-carousel-img" alt="" decoding="async" />
-      <img className="pt-carousel-img" alt="" decoding="async" />
+    <div className="pt-carousel-wrap">
+      <div className="pt-carousel" ref={rootRef}>
+        <img className="pt-carousel-img" alt="" decoding="async" />
+        <img className="pt-carousel-img" alt="" decoding="async" />
+
+        {/* Button pinned to visible IMAGE bounds (positioned by JS) */}
+        <button
+          type="button"
+          className="pt-carousel-btn"
+          aria-label="Fullscreen"
+          ref={btnRef}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const { src, alt } = currentRef.current || {};
+            if (!src) return;
+
+            document.dispatchEvent(
+              new CustomEvent("pt:open-lightbox", { detail: { src, alt } })
+            );
+          }}
+        >
+          <span className="material-symbols-outlined">fullscreen</span>
+        </button>
+      </div>
+
+      {caption && <div className="pt-caption">{caption}</div>}
     </div>
   );
 }
 
-
-
-// Main body components
 const components = {
   types: {
-    image: SanityImage,
-    carousel: CarouselBlock, // ✅ handle carousel blocks inside content array
+    contentImage: SanityImage,
+    image: SanityImage, // fallback (footnotes)
+    carousel: CarouselBlock,
   },
   block: {
     h1: ({ children }) => <h1>{children}</h1>,
-    normal: ({ children }) => <p className="pt-block">{children}</p>,
+    normal: ({ children }) => <div className="pt-block">{children}</div>,
     blockquote: ({ children }) => <blockquote>{children}</blockquote>,
   },
   marks: {
@@ -256,296 +308,132 @@ const components = {
 
 export default function PostContent({ post }) {
   const containerRef = useRef(null);
+  const scrollYRef = useRef(0);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const mql = window.matchMedia("(max-width: 768px)");
-    let cleanupCurrentMode = null;
+    // build or find lightbox once
+    let lightbox = document.querySelector(".pt-lightbox");
+    if (!lightbox) {
+      lightbox = document.createElement("div");
+      lightbox.className = "pt-lightbox";
+      lightbox.innerHTML = `
+        <div class="pt-lightbox__backdrop"></div>
+        <img class="pt-lightbox__img" alt="" />
+      `;
+      document.body.appendChild(lightbox);
+    }
 
-    const setupMobile = () => {
-      const footnotes = container.querySelectorAll(".footnote");
-      let activeInline = null;
+    const lbImg = lightbox.querySelector(".pt-lightbox__img");
+    const backdrop = lightbox.querySelector(".pt-lightbox__backdrop");
 
-      const hideInline = () => {
-        if (activeInline && activeInline.parentNode) {
-          activeInline.parentNode.removeChild(activeInline);
-        }
-        activeInline = null;
-      };
+    const lockScroll = () => {
+      const y = window.scrollY || 0;
+      scrollYRef.current = y;
 
-      footnotes.forEach((fn) => {
-        const noteEl = fn.querySelector(".footnote-note");
-        if (!noteEl) return;
-
-        fn.style.cursor = "pointer";
-
-        fn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          if (
-            activeInline &&
-            activeInline.__host === fn &&
-            activeInline.parentNode
-          ) {
-            hideInline();
-            return;
-          }
-
-          hideInline();
-
-          const span = document.createElement("span");
-          span.className = "inline-footnote";
-          span.innerHTML = noteEl.innerHTML || "";
-          span.__host = fn;
-
-          fn.insertAdjacentElement("afterend", span);
-          activeInline = span;
-        };
-      });
-
-      const clickOutside = (e) => {
-        const t = e.target;
-        if (t?.closest?.(".footnote") || t?.closest?.(".inline-footnote"))
-          return;
-        hideInline();
-      };
-
-      container.addEventListener("click", clickOutside);
-
-      return () => {
-        hideInline();
-        container.removeEventListener("click", clickOutside);
-        footnotes.forEach((fn) => {
-          fn.onclick = null;
-        });
-      };
+      // ✅ prevents jump-to-top on iOS/Safari
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
     };
 
-    const setupDesktop = () => {
-      let rightLayer = container.querySelector(".footnote-layer--right");
-      if (!rightLayer) {
-        rightLayer = document.createElement("div");
-        rightLayer.className = "footnote-layer footnote-layer--right";
-        container.appendChild(rightLayer);
-      }
+    const unlockScroll = () => {
+      const y = scrollYRef.current || 0;
 
-      let leftLayer = container.querySelector(".footnote-layer--left");
-      if (!leftLayer) {
-        leftLayer = document.createElement("div");
-        leftLayer.className = "footnote-layer footnote-layer--left";
-        container.appendChild(leftLayer);
-      }
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
 
-      let activeId = null;
-
-      const hideAllNotes = () => {
-        container
-          .querySelectorAll(".margin-note--visible")
-          .forEach((n) => n.classList.remove("margin-note--visible"));
-      };
-
-      const closeAllNotes = () => {
-        hideAllNotes();
-        activeId = null;
-      };
-
-      const showActiveIfAny = () => {
-        if (activeId === null) return;
-        const target = container.querySelector(
-          `.margin-note[data-footnote-id="${activeId}"]`
-        );
-        target?.classList.add("margin-note--visible");
-      };
-
-      const layoutNotes = () => {
-        rightLayer.innerHTML = "";
-        leftLayer.innerHTML = "";
-
-        const rectContainer = container.getBoundingClientRect();
-        const footnotes = container.querySelectorAll(".footnote");
-
-        footnotes.forEach((fn, index) => {
-          const textEl = fn.querySelector(".footnote-text");
-          const noteEl = fn.querySelector(".footnote-note");
-          if (!textEl || !noteEl) return;
-
-          const rectText = textEl.getBoundingClientRect();
-          const top = rectText.top - rectContainer.top;
-          const isRight = index % 2 === 0;
-          const id = String(index);
-
-          const div = document.createElement("div");
-          div.className = `margin-note ${isRight ? "margin-note--right" : "margin-note--left"}`;
-          div.innerHTML = noteEl.innerHTML || "";
-          div.dataset.footnoteId = id;
-          div.style.top = `${top}px`;
-
-          fn.dataset.footnoteId = id;
-          fn.style.cursor = "pointer";
-
-          if (isRight) rightLayer.appendChild(div);
-          else leftLayer.appendChild(div);
-
-          fn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const alreadyActive = activeId === id;
-
-            hideAllNotes();
-
-            if (alreadyActive) {
-              activeId = null;
-              return;
-            }
-
-            const target = container.querySelector(
-              `.margin-note[data-footnote-id="${id}"]`
-            );
-            if (target) {
-              target.classList.add("margin-note--visible");
-              activeId = id;
-            }
-          };
-        });
-
-        showActiveIfAny();
-      };
-
-      layoutNotes();
-      window.addEventListener("resize", layoutNotes);
-
-      const containerClickHandler = (e) => {
-        const t = e.target;
-        if (t?.closest?.(".footnote")) return;
-        closeAllNotes();
-      };
-
-      container.addEventListener("click", containerClickHandler);
-
-      return () => {
-        window.removeEventListener("resize", layoutNotes);
-        container.removeEventListener("click", containerClickHandler);
-
-        container.querySelectorAll(".footnote").forEach((fn) => {
-          fn.onclick = null;
-        });
-
-        rightLayer?.remove();
-        leftLayer?.remove();
-      };
+      window.scrollTo(0, y);
     };
 
-    const setupForCurrentMode = () => {
-      cleanupCurrentMode?.();
-      cleanupCurrentMode = mql.matches ? setupMobile() : setupDesktop();
-    };
-
-    setupForCurrentMode();
-
-    // --- LIGHTBOX for regular PT images (NOT carousel) ---
-    const ensureLightbox = () => {
-      let overlay = document.getElementById("ptLightbox");
-      if (overlay) return overlay;
-
-      overlay = document.createElement("div");
-      overlay.id = "ptLightbox";
-      overlay.className = "pt-lightbox";
-      overlay.innerHTML = `
-    <div class="pt-lightbox__backdrop"></div>
-    <img class="pt-lightbox__img" alt="" />
-  `;
-      document.body.appendChild(overlay);
-
-      return overlay;
-    };
-
-    const openLightbox = (imgEl) => {
-      const overlay = ensureLightbox();
-      const modalImg = overlay.querySelector(".pt-lightbox__img");
-
-      const src = imgEl.currentSrc || imgEl.src;
+    const open = (src, alt = "") => {
       if (!src) return;
 
-      // Use already-known dimensions if present; otherwise fall back to natural sizes.
-      const w = imgEl.naturalWidth || Number(imgEl.getAttribute("width")) || 0;
-      const h =
-        imgEl.naturalHeight || Number(imgEl.getAttribute("height")) || 0;
-      const isHorizontal = w && h ? w >= h : true;
+      // avoid double-lock
+      const alreadyOpen = lightbox.classList.contains("is-open");
+      if (!alreadyOpen) lockScroll();
 
-      modalImg.src = src;
-      modalImg.classList.toggle("is-horizontal", isHorizontal);
-      modalImg.classList.toggle("is-vertical", !isHorizontal);
+      lbImg.src = src;
+      lbImg.alt = alt;
 
-      overlay.classList.add("is-open");
-      document.documentElement.classList.add("pt-no-scroll");
+      lbImg.classList.remove("is-horizontal", "is-vertical");
+      const tmp = new Image();
+      tmp.onload = () => {
+        const horiz = (tmp.naturalWidth || 1) >= (tmp.naturalHeight || 1);
+        lbImg.classList.add(horiz ? "is-horizontal" : "is-vertical");
+      };
+      tmp.src = src;
+
+      lightbox.classList.add("is-open");
     };
 
-    const closeLightbox = () => {
-      const overlay = document.getElementById("ptLightbox");
-      if (!overlay) return;
-
-      overlay.classList.remove("is-open");
-      document.documentElement.classList.remove("pt-no-scroll");
-
-      const modalImg = overlay.querySelector(".pt-lightbox__img");
-      // optional: clear src after close to free memory
-      setTimeout(() => {
-        if (!overlay.classList.contains("is-open"))
-          modalImg.removeAttribute("src");
-      }, 150);
+    const close = () => {
+      if (!lightbox.classList.contains("is-open")) return;
+      lightbox.classList.remove("is-open");
+      lbImg.src = "";
+      unlockScroll();
     };
 
-    // Click-to-open (capture so it still works even if wrapped)
-    const onContainerClick = (e) => {
-      const t = e.target;
+    // ✅ open requested by carousel button
+    const onOpenFromCarousel = (e) => {
+      const { src, alt } = e.detail || {};
+      if (!src) return;
+      open(src, alt || "");
+    };
+    document.addEventListener("pt:open-lightbox", onOpenFromCarousel);
 
-      // only regular PT images
-      const img = t?.closest?.(".pt-image img");
+    // ✅ Event delegation for normal images
+    const onClick = (e) => {
+      const img = e.target.closest("img");
       if (!img) return;
+      if (!container.contains(img)) return;
 
-      // ignore carousel images
-      if (t?.closest?.(".pt-carousel")) return;
+      // ✅ don't zoom carousel images
+      if (img.classList.contains("pt-carousel-img")) return;
 
-      e.preventDefault();
-      e.stopPropagation();
-      openLightbox(img);
+      // ✅ stop any link navigation
+      const a = img.closest("a");
+      if (a) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      const src = img.currentSrc || img.src;
+      if (!src) return;
+
+      open(src, img.alt || "");
     };
 
-    container.addEventListener("click", onContainerClick, true);
+    const onClose = (e) => {
+      if (e.target === backdrop || e.target === lbImg) close();
+    };
 
-    // click overlay or ESC to close
-    const overlay = ensureLightbox();
-    const onOverlayClick = () => closeLightbox();
+    // Esc closes
     const onKeyDown = (e) => {
-      if (e.key === "Escape") closeLightbox();
+      if (e.key === "Escape") close();
     };
 
-    overlay.addEventListener("click", onOverlayClick);
-    window.addEventListener("keydown", onKeyDown);
+    container.addEventListener("click", onClick);
+    lightbox.addEventListener("click", onClose);
+    document.addEventListener("keydown", onKeyDown);
 
-    // include in your effect cleanup:
-    const cleanupLightbox = () => {
-      container.removeEventListener("click", onContainerClick, true);
-      overlay.removeEventListener("click", onOverlayClick);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-
-    const onMqlChange = () => setupForCurrentMode();
-    if (mql.addEventListener) mql.addEventListener("change", onMqlChange);
-    else mql.addListener(onMqlChange);
+    // Close lightbox on route transitions
+    const onBeforeSwap = () => close();
+    document.addEventListener("astro:before-swap", onBeforeSwap);
 
     return () => {
-      if (mql.removeEventListener)
-        mql.removeEventListener("change", onMqlChange);
-      else mql.removeListener(onMqlChange);
-
-      cleanupCurrentMode?.();
-      cleanupLightbox?.();
-      cleanupCurrentMode = null;
+      container.removeEventListener("click", onClick);
+      lightbox.removeEventListener("click", onClose);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("astro:before-swap", onBeforeSwap);
+      document.removeEventListener("pt:open-lightbox", onOpenFromCarousel);
     };
   }, [post]);
 

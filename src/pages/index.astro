@@ -50,112 +50,364 @@ const firstLow = lowResUrls[0] ?? null;
 </Layout>
 
 <script>
-  (function initSlideshow() {
-    const gallery = document.querySelector(".slideshow");
-    if (!gallery) return;
+  (function () {
+    function initSlideshow() {
+      const gallery = document.querySelector(".slideshow");
+      if (!gallery) return;
 
-    const primary = gallery.querySelector(".slideshow-image-primary");
-    if (!primary) return;
+      // Prevent double-init on the same DOM node (page-load + after-swap can both fire)
+      if (gallery.dataset.slideshowInited === "1") return;
+      gallery.dataset.slideshowInited = "1";
 
-    const secondary = primary.cloneNode(false);
-    secondary.removeAttribute("src");
-    secondary.classList.remove("slideshow-image-primary");
-    secondary.classList.add("slideshow-image-secondary");
-    secondary.classList.remove("loading");
-    secondary.classList.remove("is-visible");
-    gallery.appendChild(secondary);
+      let hi = [];
+      let low = [];
+      try {
+        hi = JSON.parse(gallery.dataset.hi || "[]");
+        low = JSON.parse(gallery.dataset.low || "[]");
+      } catch {
+        hi = [];
+        low = [];
+      }
+      if (!hi.length) return;
 
-    let hi = [];
-    let low = [];
+      const mql = window.matchMedia("(max-width: 768px)");
 
-    try {
-      hi = JSON.parse(gallery.dataset.hi || "[]");
-      low = JSON.parse(gallery.dataset.low || "[]");
-    } catch {
-      hi = [];
-      low = [];
-    }
-
-    if (!hi.length) return;
-
-    let currentIndex = Math.floor(Math.random() * hi.length);
-    let nextIndex =
-      hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
-
-    let front = primary;
-    let back = secondary;
-
-    function preload(idx) {
-      const pre = new Image();
-      pre.src = hi[idx];
-    }
-
-    function setImg(el, idx) {
-      const lowSrc = low[idx];
-      const hiSrc = hi[idx];
-
-      if (lowSrc) {
-        el.classList.add("loading");
-        el.src = lowSrc;
+      // Ensure we have at least one img to start from
+      let primary = gallery.querySelector(".slideshow-image-primary");
+      if (!primary) {
+        primary = document.createElement("img");
+        primary.className = "slideshow-image slideshow-image-primary";
+        gallery.appendChild(primary);
       }
 
-      const hiImg = new Image();
-      hiImg.src = hiSrc;
-      hiImg.onload = () => {
-        el.src = hiSrc;
-        el.classList.remove("loading");
+      // Secondary (desktop back / mobile bottom-front)
+      let secondary = gallery.querySelector(".slideshow-image-secondary");
+      if (!secondary) {
+        secondary = primary.cloneNode(false);
+        secondary.classList.remove("slideshow-image-primary");
+        secondary.classList.add("slideshow-image-secondary");
+        secondary.removeAttribute("src");
+        gallery.appendChild(secondary);
+      }
+
+      // State
+      let currentIndex = Math.floor(Math.random() * hi.length);
+      let nextIndex =
+        hi.length > 1 ? (currentIndex + 1) % hi.length : currentIndex;
+
+      let timer = null;
+      const intervalMs = 3000;
+
+      // Desktop pointers
+      let front = primary;
+      let back = secondary;
+
+      // Mobile pointers (two-up, both halves crossfade)
+      let topWrap = null;
+      let bottomWrap = null;
+
+      let topFront = primary;
+      let topBack = null; // created in mobile mode
+      let topVisible = topFront;
+
+      let bottomFront = secondary;
+      let bottomBack = null; // created in mobile mode
+      let bottomVisible = bottomFront;
+
+      // Helpers
+      function preload(idx) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () =>
+            resolve({
+              url: hi[idx],
+              w: img.naturalWidth,
+              h: img.naturalHeight,
+            });
+          img.onerror = reject;
+          img.src = hi[idx];
+        });
+      }
+
+      function setImg(el, idx) {
+        const lowSrc = low[idx];
+        const hiSrc = hi[idx];
+
+        if (lowSrc) {
+          el.classList.add("loading");
+          el.src = lowSrc;
+        }
+
+        const hiImg = new Image();
+        hiImg.onload = () => {
+          el.src = hiSrc;
+          el.classList.remove("loading");
+        };
+        hiImg.src = hiSrc;
+      }
+
+      function clearTimer() {
+        if (timer) clearInterval(timer);
+        timer = null;
+      }
+
+      function startTimer() {
+        clearTimer();
+        timer = setInterval(() => {
+          advance({ resetTimer: false });
+        }, intervalMs);
+      }
+
+      function resetTimer() {
+        startTimer();
+      }
+
+      // -----------------------
+      // Desktop mode
+      // -----------------------
+      function setupDesktop() {
+        gallery.classList.remove("is-mobile");
+        gallery.classList.add("is-desktop");
+
+        // Remove mobile wrappers if they exist
+        gallery.querySelector(".slideshow-top")?.remove();
+        gallery.querySelector(".slideshow-bottom")?.remove();
+
+        // Remove any mobile extra images
+        topBack?.remove();
+        topBack = null;
+
+        bottomBack?.remove();
+        bottomBack = null;
+
+        // Make sure both imgs are direct children and layered
+        if (primary.parentElement !== gallery) gallery.appendChild(primary);
+        if (secondary.parentElement !== gallery) gallery.appendChild(secondary);
+
+        front = primary;
+        back = secondary;
+
+        front.classList.add("is-visible");
+        back.classList.remove("is-visible");
+
+        setImg(front, currentIndex);
+        setImg(back, nextIndex);
+        preload((nextIndex + 1) % hi.length).catch(() => {});
+      }
+
+      function crossfadeDesktopTo(idx) {
+        setImg(back, idx);
+        back.classList.add("is-visible");
+        front.classList.remove("is-visible");
+        const tmp = front;
+        front = back;
+        back = tmp;
+      }
+
+      function nextDesktop() {
+        if (hi.length <= 1) return;
+        crossfadeDesktopTo(nextIndex);
+        currentIndex = nextIndex;
+        nextIndex = (nextIndex + 1) % hi.length;
+        preload(nextIndex).catch(() => {});
+      }
+
+      // -----------------------
+      // Mobile mode (two-up)
+      // TOP + BOTTOM: true crossfade simultaneously
+      // -----------------------
+      function ensureMobileStructure() {
+        gallery.classList.remove("is-desktop");
+        gallery.classList.add("is-mobile");
+
+        topWrap = gallery.querySelector(".slideshow-top");
+        bottomWrap = gallery.querySelector(".slideshow-bottom");
+
+        if (!topWrap) {
+          topWrap = document.createElement("div");
+          topWrap.className = "slideshow-top";
+          gallery.appendChild(topWrap);
+        }
+        if (!bottomWrap) {
+          bottomWrap = document.createElement("div");
+          bottomWrap.className = "slideshow-bottom";
+          gallery.appendChild(bottomWrap);
+        }
+
+        // Put primary + topBack into top wrapper
+        if (primary.parentElement !== topWrap) topWrap.appendChild(primary);
+        topFront = primary;
+
+        if (!topBack) {
+          topBack = topFront.cloneNode(false);
+          topBack.removeAttribute("src");
+          topBack.classList.remove("loading");
+          topBack.classList.remove("is-visible");
+          topWrap.appendChild(topBack);
+        } else if (topBack.parentElement !== topWrap) {
+          topWrap.appendChild(topBack);
+        }
+
+        // Put secondary + bottomBack into bottom wrapper
+        if (secondary.parentElement !== bottomWrap)
+          bottomWrap.appendChild(secondary);
+        bottomFront = secondary;
+
+        if (!bottomBack) {
+          bottomBack = bottomFront.cloneNode(false);
+          bottomBack.removeAttribute("src");
+          bottomBack.classList.remove("loading");
+          bottomBack.classList.remove("is-visible");
+          bottomWrap.appendChild(bottomBack);
+        } else if (bottomBack.parentElement !== bottomWrap) {
+          bottomWrap.appendChild(bottomBack);
+        }
+
+        // Default visibility
+        topFront.classList.add("is-visible");
+        topBack.classList.remove("is-visible");
+        topVisible = topFront;
+
+        bottomFront.classList.add("is-visible");
+        bottomBack.classList.remove("is-visible");
+        bottomVisible = bottomFront;
+      }
+
+      function setupMobile() {
+        ensureMobileStructure();
+
+        // TOP shows current
+        setImg(topFront, currentIndex);
+        topFront.classList.add("is-visible");
+        topBack.classList.remove("is-visible");
+        topVisible = topFront;
+
+        // BOTTOM shows next
+        setImg(bottomFront, nextIndex);
+        bottomFront.classList.add("is-visible");
+        bottomBack.classList.remove("is-visible");
+        bottomVisible = bottomFront;
+
+        preload((nextIndex + 1) % hi.length).catch(() => {});
+      }
+
+      function crossfadeTopTo(idx) {
+        const target = topVisible === topFront ? topBack : topFront;
+        setImg(target, idx);
+
+        target.classList.add("is-visible");
+        topVisible.classList.remove("is-visible");
+        topVisible = target;
+      }
+
+      function crossfadeBottomTo(idx) {
+        const target = bottomVisible === bottomFront ? bottomBack : bottomFront;
+        setImg(target, idx);
+
+        target.classList.add("is-visible");
+        bottomVisible.classList.remove("is-visible");
+        bottomVisible = target;
+      }
+
+      function nextMobile() {
+        if (hi.length <= 1) return;
+
+        // old next becomes new current (the image that was on bottom)
+        const oldNext = nextIndex;
+
+        currentIndex = oldNext;
+        nextIndex = (oldNext + 1) % hi.length;
+
+        // Simultaneous crossfades:
+        // TOP fades to new current (old bottom)
+        // BOTTOM fades to new next
+        crossfadeTopTo(currentIndex);
+        crossfadeBottomTo(nextIndex);
+
+        preload((nextIndex + 1) % hi.length).catch(() => {});
+      }
+
+      // -----------------------
+      // Unified advance()
+      // -----------------------
+      function advance({ resetTimer: shouldReset = true } = {}) {
+        if (mql.matches) nextMobile();
+        else nextDesktop();
+
+        if (shouldReset) resetTimer();
+      }
+
+      function setupForMode() {
+        clearTimer();
+        if (mql.matches) setupMobile();
+        else setupDesktop();
+        startTimer();
+      }
+
+      // Initial setup
+      setupForMode();
+
+      // Click to advance + reset timer
+      const onClick = () => advance({ resetTimer: true });
+      gallery.addEventListener("click", onClick);
+
+      // Pause on hover (desktop only)
+      const onEnter = () => {
+        if (!mql.matches) clearTimer();
       };
+      const onLeave = () => {
+        if (!mql.matches) startTimer();
+      };
+      gallery.addEventListener("mouseenter", onEnter);
+      gallery.addEventListener("mouseleave", onLeave);
+
+      // Rebuild on breakpoint change
+      const onMqlChange = () => setupForMode();
+      if (mql.addEventListener) mql.addEventListener("change", onMqlChange);
+      else mql.addListener(onMqlChange);
+
+      function cleanup() {
+        clearTimer();
+
+        gallery.removeEventListener("click", onClick);
+        gallery.removeEventListener("mouseenter", onEnter);
+        gallery.removeEventListener("mouseleave", onLeave);
+
+        if (mql.removeEventListener)
+          mql.removeEventListener("change", onMqlChange);
+        else mql.removeListener(onMqlChange);
+
+        // allow re-init if this same node persists (rare, but safe)
+        gallery.dataset.slideshowInited = "0";
+        delete gallery.__slideshowCleanup;
+      }
+
+      // Store cleanup so transitions can tear down before swapping
+      gallery.__slideshowCleanup = cleanup;
     }
 
-    function crossfadeTo(idx) {
-      setImg(back, idx);
-      back.classList.add("is-visible");
-      front.classList.remove("is-visible");
-      const tmp = front;
-      front = back;
-      back = tmp;
+    function cleanupSlideshowIfPresent() {
+      const gallery = document.querySelector(".slideshow");
+      if (gallery && typeof gallery.__slideshowCleanup === "function") {
+        gallery.__slideshowCleanup();
+      }
     }
 
-    function next() {
-      if (hi.length <= 1) return;
+    // Bind transition lifecycle listeners only once per session
+    if (!window.__slideshowVTBound) {
+      window.__slideshowVTBound = true;
 
-      crossfadeTo(nextIndex);
-
-      currentIndex = nextIndex;
-      nextIndex = (nextIndex + 1) % hi.length;
-
-      preload(nextIndex);
+      document.addEventListener("astro:page-load", initSlideshow);
+      document.addEventListener("astro:after-swap", initSlideshow);
+      document.addEventListener("astro:before-swap", cleanupSlideshowIfPresent);
     }
 
-    // Initial
-    front.classList.add("is-visible");
-    setImg(front, currentIndex);
-    preload(nextIndex);
-
-    // Click to advance
-    gallery.addEventListener("click", next);
-
-    // ✅ Auto-advance every 3 seconds
-    const intervalMs = 3000;
-    let timer = setInterval(next, intervalMs);
-
-    // Optional: pause on hover (desktop)
-    gallery.addEventListener("mouseenter", () => clearInterval(timer));
-    gallery.addEventListener("mouseleave", () => {
-      timer = setInterval(next, intervalMs);
-    });
-
-    // Cleanup if Astro swaps pages
-    const cleanup = () => {
-      clearInterval(timer);
-      gallery.removeEventListener("click", next);
-    };
-
-    document.addEventListener("astro:before-swap", cleanup, { once: true });
+    // Run on first load
+    initSlideshow();
   })();
 </script>
 
-<style lang="scss">
+<style lang="scss" is:global>
   .slideshow {
     position: fixed;
     inset: 0;
@@ -165,9 +417,9 @@ const firstLow = lowResUrls[0] ?? null;
     overflow: hidden;
   }
 
-  /* Desktop: layer images on top of each other for crossfade */
-  .slideshow-image-primary,
-  .slideshow-image-secondary {
+  /* Desktop: layered crossfade */
+  .slideshow.is-desktop .slideshow-image-primary,
+  .slideshow.is-desktop .slideshow-image-secondary {
     position: absolute;
     inset: 0;
     width: 100vw;
@@ -175,49 +427,63 @@ const firstLow = lowResUrls[0] ?? null;
     object-fit: cover;
     display: block;
 
-    /* ✅ crossfade 6s ease-in-out */
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.6s ease-in-out;
     will-change: opacity;
   }
 
-  .slideshow-image-primary.is-visible,
-  .slideshow-image-secondary.is-visible {
+  .slideshow.is-desktop .slideshow-image-primary.is-visible,
+  .slideshow.is-desktop .slideshow-image-secondary.is-visible {
     opacity: 1;
   }
 
-  /* Optional: keep your "loading" look (no transition on blur; just a state) */
-  .slideshow-image-primary.loading,
-  .slideshow-image-secondary.loading {
+  /* Loading look */
+  .slideshow .loading {
     filter: blur(6px);
     transform: scale(1.02);
   }
 
-  /* === Mobile: show both images stacked (current + next) === */
+  /* Mobile: two-up stacked (both halves crossfade) */
   @media (max-width: 768px) {
-    .slideshow {
+    .slideshow.is-mobile {
       display: flex;
       flex-direction: column;
     }
 
-    .slideshow-image-primary,
-    .slideshow-image-secondary {
-      position: static; /* stop layering */
+    .slideshow.is-mobile .slideshow-top,
+    .slideshow.is-mobile .slideshow-bottom {
+      position: relative;
       width: 100vw;
       height: 50vh;
-      opacity: 1; /* always visible when stacked */
-      transition: none; /* no crossfade in stacked mode */
+      overflow: hidden;
     }
 
-    .slideshow-image-secondary {
-      display: block;
+    /* TOP + BOTTOM: crossfade (two images layered) */
+    .slideshow.is-mobile .slideshow-top img,
+    .slideshow.is-mobile .slideshow-bottom img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+
+      opacity: 0;
+      transition: opacity 0.6s ease-in-out;
+      will-change: opacity;
+    }
+
+    .slideshow.is-mobile .slideshow-top img.is-visible,
+    .slideshow.is-mobile .slideshow-bottom img.is-visible {
+      opacity: 1;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .slideshow-image-primary,
-    .slideshow-image-secondary {
-      transition: none;
+    .slideshow .slideshow-image-primary,
+    .slideshow .slideshow-image-secondary,
+    .slideshow.is-mobile .slideshow-top img,
+    .slideshow.is-mobile .slideshow-bottom img {
+      transition: none !important;
     }
   }
 </style>
