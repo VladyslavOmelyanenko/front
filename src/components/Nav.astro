@@ -34,17 +34,13 @@ const routes = ["/works", "/about", "/blog"];
     transform: translateX(-50%);
     display: flex;
     list-style: none;
-    background-color: var(--gray);
-    border: 3px solid var(--gray);
-    border-radius: var(--br);
     width: max-content;
     padding: 0;
     z-index: 1000;
-    overflow: hidden;
+    gap: 8px;
     transition:
       top 0.25s ease,
       opacity 0.25s ease;
-      
   }
 
   .nav-bar--hidden {
@@ -52,8 +48,14 @@ const routes = ["/works", "/about", "/blog"];
     opacity: 0;
   }
 
+  /* ---------- DEFAULT (raised) ---------- */
   .nav-bar li {
     position: relative;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    border-radius: var(--br);
+    transition: backdrop-filter 0.15s ease;
   }
 
   .nav-bar a {
@@ -65,17 +67,23 @@ const routes = ["/works", "/about", "/blog"];
     color: #000;
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.15s ease;
     position: relative;
     z-index: 1;
+    border-radius: var(--br);
+
+    /* raised */
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
+    transition:
+      box-shadow 0.15s ease,
+      color 0.15s ease;
   }
 
   /* pill background (hover + active) */
   .nav-bar a::before {
     content: "";
     position: absolute;
-    inset: 1px;
-    background: var(--highlight-gray, #c8c8c8);
+    inset: 0;
+    // background: var(--highlight-gray, #c8c8c8);
     border-radius: var(--br);
     z-index: -1;
     opacity: 0;
@@ -102,7 +110,26 @@ const routes = ["/works", "/about", "/blog"];
     opacity: 1;
   }
 
+  /* ---------- PRESSED-IN STATES ---------- */
+  /* active stays pressed in */
+  .nav-bar a.active {
+    box-shadow: none;
+  }
+  .nav-bar li:has(a.active) {
+    background: rgba(255, 255, 255, 0.65);
+  }
 
+  /* hovered item becomes pressed in (and more opaque) */
+  .nav-bar li:hover a {
+    box-shadow: none;
+  }
+  .nav-bar li:hover {
+    // background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ---------- TOUCH DEVICES ---------- */
   @media (hover: none) {
     .nav-bar a {
       transition: none;
@@ -114,6 +141,7 @@ const routes = ["/works", "/about", "/blog"];
       color: inherit !important;
     }
 
+    /* keep active pill visible on touch */
     .nav-bar a.active::before {
       opacity: 1;
     }

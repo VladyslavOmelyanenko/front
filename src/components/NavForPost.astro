@@ -41,13 +41,15 @@ const parent = "/" + pathname.split("/")[1];
 
   /* This pill should match .nav-bar visually (height, border, bg) */
   .nav-pill {
-    background-color: var(--gray);
-    border: 3px solid var(--gray);
+    // background-color: var(--gray);
+    // border: 3px solid var(--gray);
     border-radius: var(--br);
     padding: 0;
     display: inline-flex;
     align-items: stretch;
     overflow: hidden;
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
+
     position: relative;
   }
 
@@ -59,18 +61,24 @@ const parent = "/" + pathname.split("/")[1];
     justify-content: center;
     color: #000;
     white-space: nowrap;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
 
   /* Close button wrapper */
   .close-button-container {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     position: relative;
     overflow: hidden; /* clip rounded highlight */
     border-radius: var(--br);
-    border: 3px solid var(--gray);
-    background-color: var(--gray);
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
     cursor: pointer;
+    transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
   }
 
   /* Hover highlight for close button */
@@ -97,11 +105,11 @@ const parent = "/" + pathname.split("/")[1];
   }
 
   /* Hover effect */
-  .close-button-container:hover .highlight {
-    background-color: var(--highlight-gray);
+  .close-button-container:hover {
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
-
-
 
   /* Hide on scroll – uses same class as main nav JS */
   .nav-post-wrapper.nav-bar--hidden {

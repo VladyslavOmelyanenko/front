@@ -84,7 +84,7 @@ const dateText = (() => {
     line-height: calc(var(--lh) * 2);
     text-align: center;
     border-radius: var(--br);
-    background-color: var(--gray);
+    // background-color: var(--gray);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -165,10 +165,10 @@ const dateText = (() => {
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
-
     /* container rounding */
     border-radius: var(--br);
     overflow: hidden;
+    cursor: e-resize;
   }
 
   :global(.post-content .pt-carousel-img) {
@@ -266,7 +266,7 @@ const dateText = (() => {
     text-align: center;
     margin-top: 2px;
     font-size: calc(var(--fz) * 0.6);
-    color: var(--footnote-gray);
+    // color: var(--footnote-gray);
   }
 
   :global(.post-content .pt-carousel-btn) {
@@ -300,6 +300,11 @@ const dateText = (() => {
       color: var(--footnote-gray);
       border-radius: var(--br);
       margin-left: 5%;
+    }
+
+    :global(.post-content .pt-image img),
+    :global(.post-content img) {
+      cursor: default !important;
     }
   }
 </style>

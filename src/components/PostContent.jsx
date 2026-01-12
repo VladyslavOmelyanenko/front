@@ -2,7 +2,38 @@ import { useEffect, useRef, useState } from "react";
 import { PortableText } from "@portabletext/react";
 import { urlFor } from "../lib/sanity";
 
-// Image renderer for PortableText
+/** Stable “random” side (same footnote always picks same side across renders) */
+function stableRandomSide(key) {
+  let h = 0;
+  const s = String(key ?? "");
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 2 === 0 ? "right" : "left";
+}
+
+function hashId(str) {
+  let h = 2166136261;
+  const s = String(str ?? "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `fn-${(h >>> 0).toString(36)}`;
+}
+
+function hash32(str) {
+  // FNV-1a 32-bit
+  let h = 2166136261;
+  const s = String(str ?? "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/* -------------------------------------------------------
+   Image renderer (supports contentImage + plain image)
+------------------------------------------------------- */
 function SanityImage({ value }) {
   // Supports:
   // - contentImage: { _type:"contentImage", size, image:{asset, alt, caption} }
@@ -13,8 +44,8 @@ function SanityImage({ value }) {
 
   const size =
     value?._type === "contentImage" ? value?.size || "l" : value?.size || "l";
-  const src = urlFor(asset).width(1800).auto("format").quality(85).url();
 
+  const src = urlFor(asset).width(1800).auto("format").quality(85).url();
   const alt = img?.alt || img?.caption || "";
   const caption = img?.caption || null;
 
@@ -43,11 +74,13 @@ function SanityImage({ value }) {
   );
 }
 
-// shared link renderer
+/* -------------------------------------------------------
+   Link mark (no href => no anchor, avoids scroll-to-top)
+------------------------------------------------------- */
 const LinkMark = ({ children, value }) => {
   const href = value?.href;
 
-  // ✅ no href -> no link (prevents scroll-to-top)
+  // ✅ if Sanity gives empty href, don’t render a link
   if (!href) return <>{children}</>;
 
   const isExternal = href.startsWith("http");
@@ -63,9 +96,11 @@ const LinkMark = ({ children, value }) => {
   );
 };
 
-// Footnote PortableText used INSIDE footnotes only
+/* -------------------------------------------------------
+   Footnote PortableText (inside notes only)
+------------------------------------------------------- */
 const footnoteComponents = {
-  types: { image: SanityImage },
+  types: { image: SanityImage }, // footnotes still use plain {type:"image"}
   block: {
     normal: ({ children }) => (
       <span className="fn-inline-block">{children}</span>
@@ -78,26 +113,31 @@ const footnoteComponents = {
   marks: { link: LinkMark },
 };
 
+/* -------------------------------------------------------
+   Carousel block (crossfade + caption + counter)
+   - Clicking image advances
+   - ❌ fullscreen button removed
+------------------------------------------------------- */
 function CarouselBlock({ value }) {
   const rootRef = useRef(null);
-  const btnRef = useRef(null);
-  const currentRef = useRef({ src: "", alt: "" });
   const [caption, setCaption] = useState("");
+  const [current, setCurrent] = useState(1); // 1-based
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const root = rootRef.current;
-    const btn = btnRef.current;
-    if (!root || !btn) return;
+    if (!root) return;
 
+    // Prevent double-init (Astro swaps / strict mode)
     if (root.__inited) return;
     root.__inited = true;
 
     const crossfadeMs = Number(value?.crossfadeMs ?? 6000);
-    const cursorPointer = value?.cursorPointer ?? true;
 
     const imgs = Array.from(root.querySelectorAll(".pt-carousel-img"));
     if (imgs.length < 2) return;
 
+    // Build items (url + caption + alt)
     const items =
       (value?.images || [])
         .map((img) => {
@@ -117,7 +157,8 @@ function CarouselBlock({ value }) {
 
     if (!items.length) return;
 
-    root.style.cursor = cursorPointer ? "pointer" : "default";
+    setTotal(items.length);
+
     imgs.forEach((img) => {
       img.style.transition = `opacity ${crossfadeMs}ms ease-in-out`;
     });
@@ -126,7 +167,6 @@ function CarouselBlock({ value }) {
     let front = imgs[0];
     let back = imgs[1];
     let locked = false;
-    let currentImgEl = front;
 
     front.classList.remove("is-visible");
     back.classList.remove("is-visible");
@@ -151,35 +191,11 @@ function CarouselBlock({ value }) {
       imgEl.classList.toggle("fit-contain", !isHorizontal);
     }
 
-    function setCurrent(i, imgElForPosition) {
-      setCaption(items[i]?.caption || "");
-      currentRef.current = {
-        src: items[i]?.url || "",
-        alt: items[i]?.alt || "",
-      };
-      if (imgElForPosition) {
-        currentImgEl = imgElForPosition;
-      }
+    function setCurrentItem(i) {
+      const it = items[i];
+      setCaption(it?.caption || "");
+      setCurrent(i + 1); // 1-based
     }
-
-    // ✅ Position the button relative to the CURRENT image box
-    function positionBtnOn(imgEl) {
-      if (!imgEl || !btn) return;
-
-      const rImg = imgEl.getBoundingClientRect();
-      const rRoot = root.getBoundingClientRect();
-
-      const pad = 4; // distance from image edge
-      const left = rImg.left - rRoot.left + pad;
-      const top = rImg.bottom - rRoot.top - btn.offsetHeight - pad;
-
-      btn.style.left = `${left}px`;
-      btn.style.top = `${top}px`;
-    }
-
-    const onResize = () => positionBtnOn(currentImgEl);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
 
     (async () => {
       try {
@@ -187,15 +203,14 @@ function CarouselBlock({ value }) {
         applyFit(front, loaded0.w, loaded0.h);
         front.src = loaded0.url;
         front.alt = items[0].alt || "";
-        setCurrent(0, front);
+        setCurrentItem(0);
 
-        requestAnimationFrame(() => {
-          front.classList.add("is-visible");
-          requestAnimationFrame(() => positionBtnOn(front));
-        });
+        requestAnimationFrame(() => front.classList.add("is-visible"));
 
         if (items.length > 1) preload(items[1].url).catch(() => {});
-      } catch {}
+      } catch {
+        // ignore
+      }
     })();
 
     const advance = async () => {
@@ -213,9 +228,6 @@ function CarouselBlock({ value }) {
         back.alt = nextItem.alt || "";
 
         requestAnimationFrame(() => {
-          // place button on the incoming image immediately
-          positionBtnOn(back);
-
           back.classList.add("is-visible");
           front.classList.remove("is-visible");
 
@@ -224,9 +236,8 @@ function CarouselBlock({ value }) {
           back = tmp;
 
           index = next;
-          setCurrent(index, front);
+          setCurrentItem(index);
 
-          // keep the old one hidden for next round
           back.classList.remove("is-visible");
         });
 
@@ -239,12 +250,14 @@ function CarouselBlock({ value }) {
       }
     };
 
-    root.addEventListener("click", advance);
+    const onRootClick = () => {
+      advance();
+    };
+
+    root.addEventListener("click", onRootClick);
 
     return () => {
-      root.removeEventListener("click", advance);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+      root.removeEventListener("click", onRootClick);
       root.__inited = false;
     };
   }, [value]);
@@ -254,42 +267,30 @@ function CarouselBlock({ value }) {
       <div className="pt-carousel" ref={rootRef}>
         <img className="pt-carousel-img" alt="" decoding="async" />
         <img className="pt-carousel-img" alt="" decoding="async" />
-
-        {/* Button pinned to visible IMAGE bounds (positioned by JS) */}
-        <button
-          type="button"
-          className="pt-carousel-btn"
-          aria-label="Fullscreen"
-          ref={btnRef}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const { src, alt } = currentRef.current || {};
-            if (!src) return;
-
-            document.dispatchEvent(
-              new CustomEvent("pt:open-lightbox", { detail: { src, alt } })
-            );
-          }}
-        >
-          <span className="material-symbols-outlined">fullscreen</span>
-        </button>
       </div>
 
-      {caption && <div className="pt-caption">{caption}</div>}
+      {(caption || total > 0) && (
+        <div className="pt-caption">
+          {caption ? ` ${caption}` : ""}&emsp;
+          {total > 0 ? `${current}/${total}` : ""}
+        </div>
+      )}
     </div>
   );
 }
 
+/* -------------------------------------------------------
+   PortableText components
+------------------------------------------------------- */
 const components = {
   types: {
     contentImage: SanityImage,
-    image: SanityImage, // fallback (footnotes)
+    image: SanityImage, // fallback (incl. footnotes)
     carousel: CarouselBlock,
   },
   block: {
     h1: ({ children }) => <h1>{children}</h1>,
+    // ✅ MUST NOT be <p> because images/figure can be inside
     normal: ({ children }) => <div className="pt-block">{children}</div>,
     blockquote: ({ children }) => <blockquote>{children}</blockquote>,
   },
@@ -306,6 +307,9 @@ const components = {
   },
 };
 
+/* -------------------------------------------------------
+   Main component: lightbox + footnotes (mobile/desktop)
+------------------------------------------------------- */
 export default function PostContent({ post }) {
   const containerRef = useRef(null);
   const scrollYRef = useRef(0);
@@ -314,7 +318,11 @@ export default function PostContent({ post }) {
     const container = containerRef.current;
     if (!container) return;
 
-    // build or find lightbox once
+    /* ---------------------------
+       LIGHTBOX (single images only)
+       ✅ Carousel images ignored
+       ✅ Zoom disabled on phones
+    ---------------------------- */
     let lightbox = document.querySelector(".pt-lightbox");
     if (!lightbox) {
       lightbox = document.createElement("div");
@@ -353,10 +361,9 @@ export default function PostContent({ post }) {
       window.scrollTo(0, y);
     };
 
-    const open = (src, alt = "") => {
+    const openLightbox = (src, alt = "") => {
       if (!src) return;
 
-      // avoid double-lock
       const alreadyOpen = lightbox.classList.contains("is-open");
       if (!alreadyOpen) lockScroll();
 
@@ -374,31 +381,31 @@ export default function PostContent({ post }) {
       lightbox.classList.add("is-open");
     };
 
-    const close = () => {
+    const closeLightbox = () => {
       if (!lightbox.classList.contains("is-open")) return;
       lightbox.classList.remove("is-open");
       lbImg.src = "";
       unlockScroll();
     };
 
-    // ✅ open requested by carousel button
-    const onOpenFromCarousel = (e) => {
-      const { src, alt } = e.detail || {};
-      if (!src) return;
-      open(src, alt || "");
-    };
-    document.addEventListener("pt:open-lightbox", onOpenFromCarousel);
+    const onContainerClickForZoom = (e) => {
+      // ✅ disable image zoom on phones
+      if (window.matchMedia("(max-width: 768px)").matches) return;
 
-    // ✅ Event delegation for normal images
-    const onClick = (e) => {
+      // ✅ ignore carousel block entirely (including caption area)
+      if (e.target?.closest?.(".pt-carousel-wrap")) return;
+
       const img = e.target.closest("img");
       if (!img) return;
       if (!container.contains(img)) return;
 
-      // ✅ don't zoom carousel images
+      // ✅ don't zoom carousel images (extra safety)
       if (img.classList.contains("pt-carousel-img")) return;
 
-      // ✅ stop any link navigation
+      // ✅ don't zoom icons (if any)
+      if (img.classList.contains("material-symbols-outlined")) return;
+
+      // ✅ stop link navigation (including any "#" cases)
       const a = img.closest("a");
       if (a) {
         e.preventDefault();
@@ -408,32 +415,229 @@ export default function PostContent({ post }) {
       const src = img.currentSrc || img.src;
       if (!src) return;
 
-      open(src, img.alt || "");
+      openLightbox(src, img.alt || "");
     };
 
-    const onClose = (e) => {
-      if (e.target === backdrop || e.target === lbImg) close();
+    const onLightboxClick = (e) => {
+      if (e.target === backdrop || e.target === lbImg) closeLightbox();
     };
 
-    // Esc closes
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") close();
-    };
+    container.addEventListener("click", onContainerClickForZoom);
+    lightbox.addEventListener("click", onLightboxClick);
 
-    container.addEventListener("click", onClick);
-    lightbox.addEventListener("click", onClose);
-    document.addEventListener("keydown", onKeyDown);
-
-    // Close lightbox on route transitions
-    const onBeforeSwap = () => close();
+    // Astro swaps: close before DOM changes
+    const onBeforeSwap = () => closeLightbox();
     document.addEventListener("astro:before-swap", onBeforeSwap);
 
+    /* ---------------------------
+       FOOTNOTES (mobile/desktop)
+       - Mobile: inline notes after the clicked mark
+       - Desktop: margin notes in left/right layers
+    ---------------------------- */
+    const mql = window.matchMedia("(max-width: 768px)");
+    let cleanupCurrentMode = null;
+
+    const setupMobile = () => {
+      const footnotes = container.querySelectorAll(".footnote");
+      let activeInline = null;
+
+      const hideInline = () => {
+        if (activeInline?.parentNode)
+          activeInline.parentNode.removeChild(activeInline);
+        activeInline = null;
+      };
+
+      footnotes.forEach((fn) => {
+        const noteEl = fn.querySelector(".footnote-note");
+        if (!noteEl) return;
+
+        fn.style.cursor = "pointer";
+        fn.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+
+          if (activeInline && activeInline.__host === fn) {
+            hideInline();
+            return;
+          }
+
+          hideInline();
+
+          const span = document.createElement("span");
+          span.className = "inline-footnote";
+          span.innerHTML = noteEl.innerHTML || "";
+          span.__host = fn;
+
+          fn.insertAdjacentElement("afterend", span);
+          activeInline = span;
+        };
+      });
+
+      const clickOutside = (ev) => {
+        const t = ev.target;
+        if (t?.closest?.(".footnote") || t?.closest?.(".inline-footnote"))
+          return;
+        hideInline();
+      };
+
+      container.addEventListener("click", clickOutside);
+
+      return () => {
+        hideInline();
+        container.removeEventListener("click", clickOutside);
+        footnotes.forEach((fn) => (fn.onclick = null));
+      };
+    };
+
+    const setupDesktop = () => {
+      let rightLayer = container.querySelector(".footnote-layer--right");
+      if (!rightLayer) {
+        rightLayer = document.createElement("div");
+        rightLayer.className = "footnote-layer footnote-layer--right";
+        container.appendChild(rightLayer);
+      }
+
+      let leftLayer = container.querySelector(".footnote-layer--left");
+      if (!leftLayer) {
+        leftLayer = document.createElement("div");
+        leftLayer.className = "footnote-layer footnote-layer--left";
+        container.appendChild(leftLayer);
+      }
+
+      let activeId = null;
+
+      const hideAllNotes = () => {
+        container
+          .querySelectorAll(".margin-note--visible")
+          .forEach((n) => n.classList.remove("margin-note--visible"));
+      };
+
+      const closeAllNotes = () => {
+        hideAllNotes();
+        activeId = null;
+      };
+
+      const showActiveIfAny = () => {
+        if (activeId == null) return;
+        const target = container.querySelector(
+          `.margin-note[data-footnote-id="${activeId}"]`
+        );
+        target?.classList.add("margin-note--visible");
+      };
+
+      const layoutNotes = () => {
+        rightLayer.innerHTML = "";
+        leftLayer.innerHTML = "";
+
+        const rectContainer = container.getBoundingClientRect();
+        const footnotes = container.querySelectorAll(".footnote");
+
+        footnotes.forEach((fn) => {
+          const textEl = fn.querySelector(".footnote-text");
+          const noteEl = fn.querySelector(".footnote-note");
+          if (!textEl || !noteEl) return;
+
+          const rectText = textEl.getBoundingClientRect();
+          const top = rectText.top - rectContainer.top;
+
+          const text =
+            fn.querySelector(".footnote-text")?.textContent?.trim() || "";
+          const noteHTML = fn.querySelector(".footnote-note")?.innerHTML || "";
+          const key = `${text}||${noteHTML}`;
+
+          const id = hashId(key);
+          const isRight = ((hash32(key) >>> 8) & 1) === 1;
+
+          const div = document.createElement("div");
+          div.className = `margin-note ${
+            isRight ? "margin-note--right" : "margin-note--left"
+          }`;
+          div.innerHTML = noteEl.innerHTML || "";
+          div.dataset.footnoteId = id;
+          div.style.top = `${top}px`;
+
+          fn.dataset.footnoteId = id;
+          fn.style.cursor = "pointer";
+
+          if (isRight) rightLayer.appendChild(div);
+          else leftLayer.appendChild(div);
+
+          fn.onclick = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const alreadyActive = activeId === id;
+            hideAllNotes();
+
+            if (alreadyActive) {
+              activeId = null;
+              return;
+            }
+
+            const target = container.querySelector(
+              `.margin-note[data-footnote-id="${id}"]`
+            );
+            if (target) {
+              target.classList.add("margin-note--visible");
+              activeId = id;
+            }
+          };
+        });
+
+        showActiveIfAny();
+      };
+
+      layoutNotes();
+      window.addEventListener("resize", layoutNotes);
+
+      const containerClickHandler = (ev) => {
+        const t = ev.target;
+        if (t?.closest?.(".footnote")) return;
+        closeAllNotes();
+      };
+
+      container.addEventListener("click", containerClickHandler);
+
+      return () => {
+        window.removeEventListener("resize", layoutNotes);
+        container.removeEventListener("click", containerClickHandler);
+        container
+          .querySelectorAll(".footnote")
+          .forEach((fn) => (fn.onclick = null));
+        rightLayer?.remove();
+        leftLayer?.remove();
+      };
+    };
+
+    const setupForCurrentMode = () => {
+      cleanupCurrentMode?.();
+      cleanupCurrentMode = mql.matches ? setupMobile() : setupDesktop();
+    };
+
+    setupForCurrentMode();
+
+    const onMqlChange = () => setupForCurrentMode();
+    if (mql.addEventListener) mql.addEventListener("change", onMqlChange);
+    else mql.addListener(onMqlChange);
+
+    /* ---------------------------
+       Cleanup
+    ---------------------------- */
     return () => {
-      container.removeEventListener("click", onClick);
-      lightbox.removeEventListener("click", onClose);
-      document.removeEventListener("keydown", onKeyDown);
+      // lightbox
+      container.removeEventListener("click", onContainerClickForZoom);
+      lightbox.removeEventListener("click", onLightboxClick);
       document.removeEventListener("astro:before-swap", onBeforeSwap);
-      document.removeEventListener("pt:open-lightbox", onOpenFromCarousel);
+
+      // footnotes
+      if (mql.removeEventListener)
+        mql.removeEventListener("change", onMqlChange);
+      else mql.removeListener(onMqlChange);
+      cleanupCurrentMode?.();
+      cleanupCurrentMode = null;
+
+      // safety: close if unmounting
+      closeLightbox();
     };
   }, [post]);
 

@@ -73,24 +73,36 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
     <NavForPost title={post.title} />
     <Post post={post} />
 
-    <nav class="post-pagination" aria-label="Post navigation">
+    <nav class="post-pagination" aria-label="Blog post navigation">
       {
         prev ? (
-          <a class="page-btn prev" href={`${baseRoute}/${prev.slug}`}>
-            ← {prev.title || "Previous"}
+          <a
+            class="page-btn prev"
+            href={`/works/${prev.slug}`}
+            aria-label="Previous post"
+          >
+            ← Previous
           </a>
         ) : (
-          <span class="page-btn disabled">← Previous</span>
+          <span class="page-btn disabled" aria-hidden="true">
+            ← Previous
+          </span>
         )
       }
 
       {
         next ? (
-          <a class="page-btn next" href={`${baseRoute}/${next.slug}`}>
-            {next.title || "Next"} →
+          <a
+            class="page-btn next"
+            href={`/works/${next.slug}`}
+            aria-label="Next post"
+          >
+            Next →
           </a>
         ) : (
-          <span class="page-btn disabled">Next →</span>
+          <span class="page-btn disabled" aria-hidden="true">
+            Next →
+          </span>
         )
       }
     </nav>

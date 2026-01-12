@@ -79,21 +79,33 @@ const displayTitle =
     <nav class="post-pagination" aria-label="Blog post navigation">
       {
         prev ? (
-          <a class="page-btn prev" href={`/blog/${prev.slug}`}>
-            ← {prev.title || "Previous"}
+          <a
+            class="page-btn prev"
+            href={`/blog/${prev.slug}`}
+            aria-label="Previous post"
+          >
+            ← Previous
           </a>
         ) : (
-          <span class="page-btn disabled">← Previous</span>
+          <span class="page-btn disabled" aria-hidden="true">
+            ← Previous
+          </span>
         )
       }
 
       {
         next ? (
-          <a class="page-btn next" href={`/blog/${next.slug}`}>
-            {next.title || "Next"} →
+          <a
+            class="page-btn next"
+            href={`/blog/${next.slug}`}
+            aria-label="Next post"
+          >
+            Next →
           </a>
         ) : (
-          <span class="page-btn disabled">Next →</span>
+          <span class="page-btn disabled" aria-hidden="true">
+            Next →
+          </span>
         )
       }
     </nav>

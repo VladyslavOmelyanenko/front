@@ -15,7 +15,6 @@ const isDetail =
 
 <!doctype html>
 <html lang="en" transition:animate="none">
-  <!-- disable default fade site-wide -->
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -33,6 +32,8 @@ const isDetail =
 
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+
+    <!-- Material Symbols (thin-ish) -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0"
@@ -41,22 +42,46 @@ const isDetail =
 
   <body>
     <ViewTransitions />
-    <!-- Site navigation (persisted across transitions) -->
 
     {isDetail ? null : <Nav transition:persist />}
 
-    <!-- Only the main content transitions -->
     <main class="main-container">
       <slot />
     </main>
 
-    <!-- Persist any other fixed UI too -->
     <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
 
     <!-- Scripts -->
     <script src="/scripts/nav.js" is:inline></script>
     <script src="/scripts/work-previews.js" is:inline></script>
     <script src="/scripts/blog-previews.js" is:inline></script>
+
+    <!-- ✅ CSS-only-ish fade: re-trigger on Astro swaps -->
+    <script is:inline>
+      (function () {
+        let last = 0;
+
+        function retriggerMainFade() {
+          const el = document.querySelector(".main-container");
+          if (!el) return;
+
+          // prevent duplicate calls within the same frame/time slice
+          const now = performance.now();
+          if (now - last < 50) return;
+          last = now;
+
+          el.style.animation = "none";
+          void el.offsetHeight; // force reflow
+          el.style.animation = "";
+        }
+
+        // initial load (once)
+        retriggerMainFade();
+
+        // subsequent client-side navigations
+        document.addEventListener("astro:after-swap", retriggerMainFade);
+      })();
+    </script>
   </body>
 </html>
 
@@ -73,6 +98,27 @@ const isDetail =
     margin-left: calc((100% - var(--column-width)) / 2);
     padding-bottom: 50px;
     padding-top: 132px;
+
+    /* ✅ subtle fade-in */
+    opacity: 0;
+    animation: mainFadeIn 140ms ease-out forwards;
+    will-change: opacity;
+  }
+
+  @keyframes mainFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-container {
+      animation: none;
+      opacity: 1;
+    }
   }
 
   .copyright {
@@ -92,6 +138,10 @@ const isDetail =
 
     .copyright {
       font-size: calc(var(--fz) * 0.75);
+      right: 4px;
+      bottom: 4px;
+      transform-origin: bottom right;
+      transform: rotate(-90deg) translateX(100%);
     }
   }
 </style>
