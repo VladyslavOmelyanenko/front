@@ -13,6 +13,17 @@ const CAPTIONED_IMAGE = `
   }
 `;
 
+// Portable Text field that can contain link annotations
+const PORTABLE_TEXT_WITH_LINKS = `
+  []{
+    ...,
+    markDefs[]{
+      ...,
+      _type == "link" => { _type, _key, href }
+    }
+  }
+`;
+
 /* -------------------------------------------------------
    Fetch MULTIPLE POSTS (list page)
    NOTE: this query is weird structurally (homepage doc -> field[]-> posts)
@@ -27,6 +38,9 @@ export async function getPosts(type, field) {
         postDate,
         postDescription,
         postAuthor,
+
+        // CREDIT BOX (Portable Text)
+        "creditbox": creditbox ${PORTABLE_TEXT_WITH_LINKS},
 
         // MAIN POST IMAGE (captionedImage)
         "postImage": postImage ${CAPTIONED_IMAGE},
@@ -68,6 +82,9 @@ export async function getWorkPost(slug) {
         "slug": slug.current,
         postDate,
         postType,
+
+        // CREDIT BOX (Portable Text)
+        "creditbox": creditbox ${PORTABLE_TEXT_WITH_LINKS},
 
         // MAIN POST IMAGE (captionedImage)
         "postImage": postImage ${CAPTIONED_IMAGE},
@@ -117,6 +134,9 @@ export async function getAboutPost() {
           "slug": slug.current,
           postDate,
           postType,
+
+          // CREDIT BOX (Portable Text)
+          "creditbox": creditbox ${PORTABLE_TEXT_WITH_LINKS},
 
           // MAIN POST IMAGE (captionedImage)
           "postImage": postImage ${CAPTIONED_IMAGE},

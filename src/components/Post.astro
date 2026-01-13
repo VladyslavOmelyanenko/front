@@ -20,7 +20,7 @@ const dateText = (() => {
 })();
 ---
 
-<div>
+<div class="post-container">
   {
     post.postType != "about" && (
       <div class="title-bar">
@@ -48,6 +48,11 @@ const dateText = (() => {
     position: relative;
   }
 
+  .post-container {
+    padding-top: var(--pt);
+    height: calc(100vh);
+    overflow: scroll;
+  }
   .title-bar {
     display: flex;
     justify-content: space-between;
@@ -80,18 +85,14 @@ const dateText = (() => {
   :global(.post-content blockquote) {
     font-weight: normal;
     width: 100%;
-    font-size: calc(var(--fz) * 2);
-    line-height: calc(var(--lh) * 2);
-    text-align: center;
-    border-radius: var(--br);
-    // background-color: var(--gray);
+
+
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: calc(var(--lh) * 10);
     margin-top: calc(var(--lh) / 2);
     margin-bottom: calc(var(--lh) / 2);
-    padding: 40px;
+    padding: 40px 0 40px 40px;
   }
 
   /* === SHARED FOOTNOTE STYLES === */
@@ -232,16 +233,16 @@ const dateText = (() => {
   :global(.pt-lightbox__backdrop) {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   :global(.pt-lightbox__img) {
     position: relative;
     z-index: 1;
     border-radius: var(--br);
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: 80vw;
+    max-height: 80vh;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -258,6 +259,25 @@ const dateText = (() => {
   :global(.pt-lightbox__img.is-vertical) {
     max-height: 90vh;
     max-width: 90vw;
+  }
+
+  :global(.pt-lightbox__content) {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    max-width: 90vw;
+    max-height: 90vh;
+  }
+
+  :global(.pt-lightbox__caption) {
+    max-width: 90vw;
+    text-align: center;
+    font-size: calc(var(--fz) * 0.6);
+    // color: var(--footnote-gray);
+    display: none;
   }
 
   :global(.post-content .pt-caption) {

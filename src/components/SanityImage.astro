@@ -25,7 +25,7 @@ const size = value?._type === "contentImage" ? value?.size : null;
 {
   src && (
     <figure class={size ? `content-image size-${size}` : "content-image"}>
-      <img src={src} alt={alt} loading="lazy" />
+      <img src={src} alt={alt} loading="lazy" data-caption={caption ?? ""} />
       {caption && <figcaption>{caption}</figcaption>}
     </figure>
   )

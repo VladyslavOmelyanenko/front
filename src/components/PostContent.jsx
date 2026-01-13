@@ -61,6 +61,7 @@ function SanityImage({ value }) {
         alt={alt}
         loading="lazy"
         decoding="async"
+        data-caption={caption ?? ""} // ✅ ADD THIS
         style={{
           width: "100%",
           height: "auto",
@@ -329,12 +330,16 @@ export default function PostContent({ post }) {
       lightbox.className = "pt-lightbox";
       lightbox.innerHTML = `
         <div class="pt-lightbox__backdrop"></div>
-        <img class="pt-lightbox__img" alt="" />
+        <div class="pt-lightbox__content">
+          <img class="pt-lightbox__img" alt="" />
+          <div class="pt-lightbox__caption"></div>
+        </div>
       `;
       document.body.appendChild(lightbox);
     }
 
     const lbImg = lightbox.querySelector(".pt-lightbox__img");
+    const lbCap = lightbox.querySelector(".pt-lightbox__caption"); // ✅ ADD
     const backdrop = lightbox.querySelector(".pt-lightbox__backdrop");
 
     const lockScroll = () => {
@@ -361,7 +366,7 @@ export default function PostContent({ post }) {
       window.scrollTo(0, y);
     };
 
-    const openLightbox = (src, alt = "") => {
+    const openLightbox = (src, alt = "", caption = "") => {
       if (!src) return;
 
       const alreadyOpen = lightbox.classList.contains("is-open");
@@ -369,6 +374,11 @@ export default function PostContent({ post }) {
 
       lbImg.src = src;
       lbImg.alt = alt;
+
+      if (lbCap) {
+        lbCap.textContent = caption || "";
+        lbCap.style.display = caption ? "block" : "none";
+      }
 
       lbImg.classList.remove("is-horizontal", "is-vertical");
       const tmp = new Image();
@@ -385,6 +395,7 @@ export default function PostContent({ post }) {
       if (!lightbox.classList.contains("is-open")) return;
       lightbox.classList.remove("is-open");
       lbImg.src = "";
+      if (lbCap) lbCap.textContent = "";
       unlockScroll();
     };
 
@@ -415,7 +426,15 @@ export default function PostContent({ post }) {
       const src = img.currentSrc || img.src;
       if (!src) return;
 
-      openLightbox(src, img.alt || "");
+      const caption =
+        img.dataset.caption ||
+        img
+          .closest("figure")
+          ?.querySelector("figcaption")
+          ?.textContent?.trim() ||
+        "";
+
+      openLightbox(src, img.alt || "", caption);
     };
 
     const onLightboxClick = (e) => {

@@ -5,6 +5,7 @@ import Feed from "../../components/Feed.astro";
 import { client } from "../../lib/sanity.js";
 import Post from "../../components/Post.astro";
 import { getWorkPost as getPostBySlug } from "../../data/works"; // rename later if you like
+import { PortableText } from "@portabletext/react";
 
 export async function getStaticPaths() {
   const slugs = await client.fetch(`
@@ -73,20 +74,15 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
     <Feed>
       <NavForPost title={post.title} />
       <Post post={post} />
+
       <nav class="post-pagination" aria-label="Blog post navigation">
         {
-          prev ? (
-            <a
-              class="page-btn prev"
-              href={`/works/${prev.slug}`}
-              aria-label="Previous post"
-            >
-              ← Previous
-            </a>
+          post?.creditbox?.length ? (
+            <div class="creditbox" aria-label="Credits">
+              <PortableText value={post.creditbox} />
+            </div>
           ) : (
-            <span class="page-btn disabled" aria-hidden="true">
-              ← Previous
-            </span>
+            <span class="page-btn disabled" aria-hidden="true" />
           )
         }
 
@@ -94,7 +90,7 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
           next ? (
             <a
               class="page-btn next"
-              href={`/works/${next.slug}`}
+              href={`${baseRoute}/${next.slug}`}
               aria-label="Next post"
             >
               Next →
@@ -111,10 +107,11 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
 </Layout>
 
 <style lang="scss">
-  .post-page {
-    padding-top: var(--pt);
-    padding-bottom: 50px;
-  }
+  // .post-page {
+  //   padding-top: var(--pt);
+  //   padding-bottom: 50px;
+  // }
+
   .post-pagination {
     margin-top: 40px;
     display: flex;
@@ -144,5 +141,26 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
   .page-btn.disabled {
     opacity: 0.35;
     pointer-events: none;
+  }
+
+  /* Credit box styling inside pagination */
+  .creditbox {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    align-items: center;
+    font-size: calc(var(--fz) * 0.6);
+    line-height: calc(var(--lh) * 0.65);
+  }
+
+  /* Keep PortableText blocks from adding big margins */
+  .page-btn.creditbox :global(p) {
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .page-btn.creditbox :global(a) {
+    text-decoration: underline;
+    color: inherit;
   }
 </style>
