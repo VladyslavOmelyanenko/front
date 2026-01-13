@@ -160,7 +160,7 @@ function CarouselBlock({ value }) {
     setTotal(items.length);
 
     imgs.forEach((img) => {
-      img.style.transition = `opacity ${crossfadeMs}ms ease-in-out`;
+      img.style.transition = `opacity ${800}ms ease-in-out`;
     });
 
     let index = 0;

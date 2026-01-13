@@ -9,13 +9,18 @@ const works = await getPosts("works", "selectedWorkPosts");
 ---
 
 <Layout title="Dzastins Zavadzkis—Works">
-  <div class="work-feed">
-    {works.map((work) => <WorkPreview workPost={work} />)}
+  <div class="works-page">
+    <div class="work-feed">
+      {works.map((work) => <WorkPreview workPost={work} />)}
+    </div>
   </div>
 </Layout>
 
 <style lang="scss">
+
+
   .work-feed {
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 10px;

@@ -56,7 +56,7 @@ const initialImages = thumbUrls.slice(0, 3);
       .work-title,
       .work-short-description,
       .work-year {
-        background-color: var(--highlight-gray);
+        box-shadow: 0 0 0px rgba(122, 122, 122, 0.9);
       }
     }
 
@@ -64,7 +64,9 @@ const initialImages = thumbUrls.slice(0, 3);
     .work-short-description,
     .work-year {
       border-radius: var(--br);
-      background-color: var(--gray);
+      backdrop-filter: var(--backdrop-filter);
+      -webkit-backdrop-filter: var(--backdrop-filter);
+      box-shadow: var(--box-shadow);
       text-align: center;
       padding: 0 8px;
       display: flex;

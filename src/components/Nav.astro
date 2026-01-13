@@ -51,9 +51,9 @@ const routes = ["/works", "/about", "/blog"];
   /* ---------- DEFAULT (raised) ---------- */
   .nav-bar li {
     position: relative;
-    background: rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background: var(--pill-bg);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     border-radius: var(--br);
     transition: backdrop-filter 0.15s ease;
   }
@@ -72,7 +72,7 @@ const routes = ["/works", "/about", "/blog"];
     border-radius: var(--br);
 
     /* raised */
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
+    box-shadow: var(--box-shadow);
     transition:
       box-shadow 0.15s ease,
       color 0.15s ease;
@@ -83,7 +83,6 @@ const routes = ["/works", "/about", "/blog"];
     content: "";
     position: absolute;
     inset: 0;
-    // background: var(--highlight-gray, #c8c8c8);
     border-radius: var(--br);
     z-index: -1;
     opacity: 0;
@@ -113,7 +112,7 @@ const routes = ["/works", "/about", "/blog"];
   /* ---------- PRESSED-IN STATES ---------- */
   /* active stays pressed in */
   .nav-bar a.active {
-    box-shadow: none;
+    box-shadow: 0 0 0px rgba(122, 122, 122, 0.9);
   }
   .nav-bar li:has(a.active) {
     background: rgba(255, 255, 255, 0.65);
@@ -125,8 +124,8 @@ const routes = ["/works", "/about", "/blog"];
   }
   .nav-bar li:hover {
     // background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: var(--backdrop-filter-pressed);
+    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
   }
 
   /* ---------- TOUCH DEVICES ---------- */

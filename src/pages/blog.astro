@@ -6,8 +6,10 @@ const blogPosts = await getPosts("blog", "selectedBlogPosts");
 ---
 
 <Layout title="Dzastins Zavadzkis—Blog">
-  <div class="blog-feed">
-    {blogPosts.map((blogPost) => <BlogPreview blogPost={blogPost} />)}
+  <div class="works-page">
+    <div class="blog-feed">
+      {blogPosts.map((blogPost) => <BlogPreview blogPost={blogPost} />)}
+    </div>
   </div>
 </Layout>
 

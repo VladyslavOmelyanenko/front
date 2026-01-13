@@ -96,9 +96,7 @@ const isDetail =
   .main-container {
     width: var(--column-width);
     margin-left: calc((100% - var(--column-width)) / 2);
-    padding-bottom: 50px;
-    padding-top: 132px;
-
+    min-height: 100vh;
     /* ✅ subtle fade-in */
     opacity: 0;
     animation: mainFadeIn 140ms ease-out forwards;
@@ -142,6 +140,53 @@ const isDetail =
       bottom: 4px;
       transform-origin: bottom right;
       transform: rotate(-90deg) translateX(100%);
+    }
+  }
+
+  /* ================================
+   Works page: true viewport centering
+   with minimum top/bottom spacing
+   (only when .works-page exists)
+================================= */
+
+  .main-container:has(.works-page) {
+    min-height: 100vh;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Flexible spacers above/below content */
+  .main-container:has(.works-page)::before,
+  .main-container:has(.works-page)::after {
+    content: "";
+    flex: 1 1 0;
+  }
+
+  /* Minimum top/bottom "padding" */
+  .main-container:has(.works-page)::before {
+    min-height: var(--pt); /* matches your desktop main-container padding-top */
+  }
+
+  .main-container:has(.works-page)::after {
+    min-height: 50px; /* matches your desktop padding-bottom area */
+  }
+
+  /* Prevent inner wrapper from fighting layout */
+  .main-container:has(.works-page) .works-page {
+    min-height: auto;
+    padding: 0;
+  }
+
+  /* Mobile values to match your Layout */
+  @media (max-width: 768px) {
+    .main-container:has(.works-page)::before {
+      min-height: 110px;
+    }
+    .main-container:has(.works-page)::after {
+      min-height: 40px;
     }
   }
 </style>

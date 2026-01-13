@@ -9,7 +9,15 @@ console.log("aboutPost:", aboutPost);
 ---
 
 <Layout title="Dzastins Zavadzkis—About">
-  <Feed type="about">
-    <Post post={aboutPost} />
-  </Feed>
+  <div class="about-page">
+    <Feed type="about">
+      <Post post={aboutPost} />
+    </Feed>
+  </div>
 </Layout>
+
+<style lang="scss">
+  .about-page {
+    padding-top: var(--pt);
+  }
+</style>

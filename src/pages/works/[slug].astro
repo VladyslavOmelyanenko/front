@@ -69,47 +69,52 @@ const baseRoute = postType === "blog" ? "/blog" : "/works";
 ---
 
 <Layout title={`Dzastins Zavadzkis—${post.title}`}>
-  <Feed>
-    <NavForPost title={post.title} />
-    <Post post={post} />
+  <div class="post-page">
+    <Feed>
+      <NavForPost title={post.title} />
+      <Post post={post} />
+      <nav class="post-pagination" aria-label="Blog post navigation">
+        {
+          prev ? (
+            <a
+              class="page-btn prev"
+              href={`/works/${prev.slug}`}
+              aria-label="Previous post"
+            >
+              ← Previous
+            </a>
+          ) : (
+            <span class="page-btn disabled" aria-hidden="true">
+              ← Previous
+            </span>
+          )
+        }
 
-    <nav class="post-pagination" aria-label="Blog post navigation">
-      {
-        prev ? (
-          <a
-            class="page-btn prev"
-            href={`/works/${prev.slug}`}
-            aria-label="Previous post"
-          >
-            ← Previous
-          </a>
-        ) : (
-          <span class="page-btn disabled" aria-hidden="true">
-            ← Previous
-          </span>
-        )
-      }
-
-      {
-        next ? (
-          <a
-            class="page-btn next"
-            href={`/works/${next.slug}`}
-            aria-label="Next post"
-          >
-            Next →
-          </a>
-        ) : (
-          <span class="page-btn disabled" aria-hidden="true">
-            Next →
-          </span>
-        )
-      }
-    </nav>
-  </Feed>
+        {
+          next ? (
+            <a
+              class="page-btn next"
+              href={`/works/${next.slug}`}
+              aria-label="Next post"
+            >
+              Next →
+            </a>
+          ) : (
+            <span class="page-btn disabled" aria-hidden="true">
+              Next →
+            </span>
+          )
+        }
+      </nav>
+    </Feed>
+  </div>
 </Layout>
 
 <style lang="scss">
+  .post-page {
+    padding-top: var(--pt);
+    padding-bottom: 50px;
+  }
   .post-pagination {
     margin-top: 40px;
     display: flex;

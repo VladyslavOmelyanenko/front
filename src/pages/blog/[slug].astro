@@ -73,46 +73,52 @@ const displayTitle =
 
 <Layout title={`Dzastins Zavadzkis—${postDate}`}>
   <NavForPost title={displayTitle} />
-  <Feed>
-    <Post post={post} />
+  <div class="post-page">
+    <Feed>
+      <Post post={post} />
 
-    <nav class="post-pagination" aria-label="Blog post navigation">
-      {
-        prev ? (
-          <a
-            class="page-btn prev"
-            href={`/blog/${prev.slug}`}
-            aria-label="Previous post"
-          >
-            ← Previous
-          </a>
-        ) : (
-          <span class="page-btn disabled" aria-hidden="true">
-            ← Previous
-          </span>
-        )
-      }
+      <nav class="post-pagination" aria-label="Blog post navigation">
+        {
+          prev ? (
+            <a
+              class="page-btn prev"
+              href={`/blog/${prev.slug}`}
+              aria-label="Previous post"
+            >
+              ← Previous
+            </a>
+          ) : (
+            <span class="page-btn disabled" aria-hidden="true">
+              ← Previous
+            </span>
+          )
+        }
 
-      {
-        next ? (
-          <a
-            class="page-btn next"
-            href={`/blog/${next.slug}`}
-            aria-label="Next post"
-          >
-            Next →
-          </a>
-        ) : (
-          <span class="page-btn disabled" aria-hidden="true">
-            Next →
-          </span>
-        )
-      }
-    </nav>
-  </Feed>
+        {
+          next ? (
+            <a
+              class="page-btn next"
+              href={`/blog/${next.slug}`}
+              aria-label="Next post"
+            >
+              Next →
+            </a>
+          ) : (
+            <span class="page-btn disabled" aria-hidden="true">
+              Next →
+            </span>
+          )
+        }
+      </nav>
+    </Feed>
+  </div>
 </Layout>
 
 <style lang="scss">
+  .post-page {
+    padding-top: var(--pt);
+    padding-bottom: 50px;
+  }
   .post-pagination {
     margin-top: 40px;
     display: flex;
