@@ -1,4 +1,6 @@
 ---
+export const prerender = false;
+
 import Layout from "../layouts/Layout.astro";
 import WorkPreview from "../components/WorkPreview.astro";
 
@@ -17,8 +19,6 @@ const works = await getPosts("works", "selectedWorkPosts");
 </Layout>
 
 <style lang="scss">
-
-
   .work-feed {
     width: 100%;
     display: flex;
