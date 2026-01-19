@@ -9,26 +9,22 @@ import Post from "../../components/Post.astro";
 import { getWorkPost as getPostBySlug } from "../../data/works";
 import { PortableText } from "@portabletext/react";
 
-export async function getStaticPaths() {
-  const slugs = await client.fetch(`
-    *[_type == "post"
-      && defined(slug.current)
-      && defined(postDate)
-      && !(_id in path("drafts.**"))
-    ]{
-      "slug": slug.current
-    }
-  `);
+// ✅ SSR: use params, not props
+const { slug } = Astro.params;
 
-  return slugs.map(({ slug }) => ({
-    params: { slug },
-    props: { postSlug: slug },
-  }));
-}
+// If slug missing (shouldn't happen), go back
+if (!slug) return Astro.redirect("/works");
 
-const { postSlug } = Astro.props;
-const post = await getPostBySlug(postSlug);
+const post = await getPostBySlug(slug);
 if (!post) return Astro.redirect("/404");
+
+// ✅ Option 1 lock: block locked posts unless cookie exists
+const locked = post.isHidden === true;
+const unlocked = Astro.cookies.get("private_ui")?.value === "1";
+
+if (locked && !unlocked) {
+  return Astro.redirect("/works");
+}
 
 const baseDate = post.postDate;
 const postType = post.postType ?? "work";

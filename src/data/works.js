@@ -36,6 +36,7 @@ export async function getPosts(type, field) {
         title,
         "slug": slug.current,
         postDate,
+        isHidden,
         postDescription,
         postAuthor,
 
@@ -82,6 +83,7 @@ export async function getWorkPost(slug) {
         "slug": slug.current,
         postDate,
         postType,
+        isHidden,
 
         // CREDIT BOX (Portable Text)
         "creditbox": creditbox ${PORTABLE_TEXT_WITH_LINKS},

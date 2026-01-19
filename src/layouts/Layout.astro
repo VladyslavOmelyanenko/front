@@ -16,7 +16,9 @@ const isDetail =
 <!doctype html>
 <html lang="en" transition:animate="none">
   <head>
+    <!-- ✅ MUST be first in <head> -->
     <meta charset="UTF-8" />
+
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -48,8 +50,20 @@ const isDetail =
     <main class="main-container">
       <slot />
     </main>
+    
+    <slot name="overlay" />
 
-    <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
+    <div class="footer">
+      <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
+
+      {
+        segments[0] === "works" && segments.length === 1 ? (
+          <button class="works-unlock-link" type="button" data-open-unlock>
+            Unlock…
+          </button>
+        ) : null
+      }
+    </div>
 
     <!-- Scripts -->
     <script src="/scripts/nav.js" is:inline></script>
@@ -65,20 +79,16 @@ const isDetail =
           const el = document.querySelector(".main-container");
           if (!el) return;
 
-          // prevent duplicate calls within the same frame/time slice
           const now = performance.now();
           if (now - last < 50) return;
           last = now;
 
           el.style.animation = "none";
-          void el.offsetHeight; // force reflow
+          void el.offsetHeight;
           el.style.animation = "";
         }
 
-        // initial load (once)
         retriggerMainFade();
-
-        // subsequent client-side navigations
         document.addEventListener("astro:after-swap", retriggerMainFade);
       })();
     </script>
@@ -97,7 +107,6 @@ const isDetail =
     width: var(--column-width);
     margin-left: calc((100% - var(--column-width)) / 2);
     min-height: 100vh;
-    /* ✅ subtle fade-in */
     opacity: 0;
     animation: mainFadeIn 140ms ease-out forwards;
     will-change: opacity;
@@ -119,12 +128,24 @@ const isDetail =
     }
   }
 
-  .copyright {
+  .footer {
     position: fixed;
     bottom: 10px;
     right: 20px;
     z-index: 9999;
     font-size: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .works-unlock-link {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    text-align-last: left;
+    font-size: inherit;
+    cursor: pointer;
+    color: var(--gray);
   }
 
   @media (max-width: 768px) {
@@ -134,7 +155,7 @@ const isDetail =
       padding-top: 110px;
     }
 
-    .copyright {
+    .footer {
       font-size: calc(var(--fz) * 0.75);
       right: 4px;
       bottom: 4px;
@@ -143,44 +164,33 @@ const isDetail =
     }
   }
 
-  /* ================================
-   Works page: true viewport centering
-   with minimum top/bottom spacing
-   (only when .works-page exists)
-================================= */
-
   .main-container:has(.works-page) {
     min-height: 100vh;
     padding-top: 0;
     padding-bottom: 0;
-
     display: flex;
     flex-direction: column;
   }
 
-  /* Flexible spacers above/below content */
   .main-container:has(.works-page)::before,
   .main-container:has(.works-page)::after {
     content: "";
     flex: 1 1 0;
   }
 
-  /* Minimum top/bottom "padding" */
   .main-container:has(.works-page)::before {
-    min-height: var(--pt); /* matches your desktop main-container padding-top */
+    min-height: var(--pt);
   }
 
   .main-container:has(.works-page)::after {
-    min-height: 50px; /* matches your desktop padding-bottom area */
+    min-height: 50px;
   }
 
-  /* Prevent inner wrapper from fighting layout */
   .main-container:has(.works-page) .works-page {
     min-height: auto;
     padding: 0;
   }
 
-  /* Mobile values to match your Layout */
   @media (max-width: 768px) {
     .main-container:has(.works-page)::before {
       min-height: 110px;

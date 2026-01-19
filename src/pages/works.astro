@@ -3,11 +3,13 @@ export const prerender = false;
 
 import Layout from "../layouts/Layout.astro";
 import WorkPreview from "../components/WorkPreview.astro";
-
 import { getPosts } from "../data/works";
-const works = await getPosts("works", "selectedWorkPosts");
 
-// console.log(works);
+const works = await getPosts("works", "selectedWorkPosts");
+const unlockFail = Astro.url.searchParams.get("unlock") === "fail";
+
+// ✅ works with HttpOnly cookie (server-side)
+const unlocked = Astro.cookies.get("private_ui")?.value === "1";
 ---
 
 <Layout title="Dzastins Zavadzkis—Works">
@@ -16,7 +18,116 @@ const works = await getPosts("works", "selectedWorkPosts");
       {works.map((work) => <WorkPreview workPost={work} />)}
     </div>
   </div>
+
+  <!-- ✅ Overlay lives in Layout slot, so it can blur nav + footer -->
+  <div
+    slot="overlay"
+    class="unlock-overlay"
+    data-unlock-overlay
+    aria-hidden="true"
+  >
+    <!-- ✅ EXACT like pt-lightbox__backdrop -->
+    <div class="unlock-backdrop" data-unlock-backdrop></div>
+
+    <div class="unlock-modal">
+      <h2 class="unlock-title">Unlock Hidden Projects</h2>
+
+      <form method="POST" action="/api/private-ui-unlock" class="unlock-form">
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+        />
+        <button type="submit">OK</button>
+      </form>
+
+      {unlockFail && <p class="unlock-error">Wrong password</p>}
+    </div>
+  </div>
 </Layout>
+
+<script is:inline data-astro-rerun define:vars={{ unlocked }}>
+  (() => {
+    // ✅ HttpOnly-safe: server passed boolean
+    const isUnlocked = unlocked;
+    document.documentElement.classList.toggle("works-unlocked", isUnlocked);
+
+    // Close overlay on entry
+    const overlay = document.querySelector("[data-unlock-overlay]");
+    if (overlay) {
+      overlay.classList.remove("is-open");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    // Bind once
+    if (window.__worksUnlockBound) return;
+    window.__worksUnlockBound = true;
+
+    function getOverlay() {
+      return document.querySelector("[data-unlock-overlay]");
+    }
+
+    function openOverlay() {
+      const ov = getOverlay();
+      if (!ov) return;
+      ov.classList.add("is-open");
+      ov.setAttribute("aria-hidden", "false");
+
+      const input = ov.querySelector("input[type='password']");
+      if (input) setTimeout(() => input.focus(), 0);
+    }
+
+    function closeOverlay() {
+      const ov = getOverlay();
+      if (!ov) return;
+      ov.classList.remove("is-open");
+      ov.setAttribute("aria-hidden", "true");
+    }
+
+    // Footer Unlock… button (Layout)
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-open-unlock]");
+      if (!btn) return;
+      openOverlay();
+    });
+
+    // Clicking locked items opens overlay instead of navigating
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("a[data-locked='true']");
+      if (!a) return;
+
+      if (document.documentElement.classList.contains("works-unlocked")) return;
+
+      e.preventDefault();
+      openOverlay();
+    });
+
+    // Click backdrop closes
+    document.addEventListener("click", (e) => {
+      const backdrop = e.target.closest("[data-unlock-backdrop]");
+      if (!backdrop) return;
+      closeOverlay();
+    });
+
+    // Escape closes
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeOverlay();
+    });
+
+    // Wrong password => open once then clean URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("unlock") === "fail") {
+      openOverlay();
+      params.delete("unlock");
+      const newUrl =
+        window.location.pathname +
+        (params.toString() ? `?${params.toString()}` : "");
+      window.history.replaceState({}, "", newUrl);
+    }
+  })();
+</script>
 
 <style lang="scss">
   .work-feed {
@@ -24,5 +135,117 @@ const works = await getPosts("works", "selectedWorkPosts");
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  /* ==========================
+     Overlay (PT lightbox style)
+     ========================== */
+
+  .unlock-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000000; /* ✅ above nav + footer */
+    display: none;
+    place-items: center;
+  }
+
+  .unlock-overlay.is-open {
+    display: grid;
+  }
+
+  /* ✅ EXACT same idea as .pt-lightbox__backdrop (blur only) */
+  .unlock-backdrop {
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+  }
+
+  .unlock-modal {
+    position: relative;
+    z-index: 1;
+    width: min(92vw, 420px);
+  }
+
+  .unlock-title {
+    margin: 0 0 10px;
+    font-size: calc(var(--fz) * 0.6);
+    text-align: center;
+  }
+
+  .unlock-form {
+    display: flex;
+    gap: 8px;
+  }
+
+  .unlock-form input {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: var(--br);
+    border: none;
+    background: var(--pill-bg);
+    font-size: var(--fz);
+    height: 42px;
+
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
+    box-shadow: var(--box-shadow);
+
+    transition:
+      backdrop-filter 0.15s ease,
+      box-shadow 0.15s ease;
+    cursor: text;
+  }
+
+  .unlock-form button {
+    padding: 8px 12px;
+    border-radius: var(--br);
+    border: none;
+    background: var(--pill-bg);
+    cursor: pointer;
+    height: 42px;
+
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
+    box-shadow: var(--box-shadow);
+
+    transition:
+      backdrop-filter 0.15s ease,
+      box-shadow 0.15s ease;
+    font-size: var(--fz);
+  }
+
+  .unlock-form button:hover,
+  .unlock-form input:hover,
+  .unlock-form input:focus {
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+    backdrop-filter: var(--backdrop-filter-pressed);
+    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
+    outline: 0;
+  }
+
+  .unlock-error {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #b00020;
+    text-align: center;
+  }
+
+  /* ==========================
+     ✅ Prevent "shadow cloud" behind blur
+     Works even with overlay in Layout slot
+     ========================== */
+
+  :global(html:has(.unlock-overlay.is-open)) .work-title,
+  :global(html:has(.unlock-overlay.is-open)) .work-short-description,
+  :global(html:has(.unlock-overlay.is-open)) .work-year {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  :global(html:has(.unlock-overlay.is-open)) .work-image {
+    box-shadow: none !important;
   }
 </style>

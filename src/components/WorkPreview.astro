@@ -16,7 +16,11 @@ const thumbUrls = images
 const initialImages = thumbUrls.slice(0, 3);
 ---
 
-<a href={"/works/" + workPost.slug}>
+<a
+  href={"/works/" + workPost.slug}
+  data-locked={workPost.isHidden ? "true" : "false"}
+  class:list={{ locked: workPost.isHidden }}
+>
   <div class="work-preview" data-images={JSON.stringify(thumbUrls)}>
     <h2 class="work-title">{workPost.title}</h2>
 
@@ -102,6 +106,19 @@ const initialImages = thumbUrls.slice(0, 3);
       border: 1.5px solid #d9d9d9;
       object-fit: cover;
     }
+  }
+  a.locked .work-preview {
+    // opacity: 0.5;
+    pointer-events: auto;
+
+    .work-title, .work-short-description, .work-year {
+      filter: blur(3px);
+    }
+  }
+
+  :global(html.works-unlocked) a.locked .work-preview {
+    // filter: none;
+    opacity: 1;
   }
 
   @media (max-width: 768px) {

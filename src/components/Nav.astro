@@ -36,7 +36,7 @@ const routes = ["/works", "/about", "/blog"];
     list-style: none;
     width: max-content;
     padding: 0;
-    z-index: 1000;
+    z-index: 10;
     gap: 8px;
     transition:
       top 0.25s ease,
@@ -112,7 +112,7 @@ const routes = ["/works", "/about", "/blog"];
   /* ---------- PRESSED-IN STATES ---------- */
   /* active stays pressed in */
   .nav-bar a.active {
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9) inset;
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
   }
   .nav-bar li:has(a.active) {
     background: rgba(255, 255, 255, 0.65);
@@ -120,7 +120,7 @@ const routes = ["/works", "/about", "/blog"];
 
   /* hovered item becomes pressed in (and more opaque) */
   .nav-bar li:hover a {
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9) inset;
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
   }
   .nav-bar li:hover {
     // background: rgba(255, 255, 255, 0.65);
