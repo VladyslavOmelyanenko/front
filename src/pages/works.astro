@@ -1,38 +1,96 @@
 ---
-export const prerender = false;
-
 import Layout from "../layouts/Layout.astro";
 import WorkPreview from "../components/WorkPreview.astro";
 import { getPosts } from "../data/works";
+import { supabaseAdmin } from "../lib/supabaseAdmin";
 
 const works = await getPosts("works", "selectedWorkPosts");
-const unlockFail = Astro.url.searchParams.get("unlock") === "fail";
 
-// ✅ works with HttpOnly cookie (server-side)
-const unlocked = Astro.cookies.get("private_ui")?.value === "1";
+// ✅ Supabase hidden previews (server-side)
+const { data: hidden } = await supabaseAdmin
+  .from("private_posts_preview")
+  .select("slug,title,post_date,post_description,thumbs")
+  .order("post_date", { ascending: false });
+
+const hiddenPosts = hidden ?? [];
+
+// ✅ Normalize into ONE array + sort
+const allPosts = [
+  ...works.map((w) => ({
+    _source: "sanity",
+    _sortDate: new Date(w.postDate).getTime() || 0,
+    _raw: w,
+  })),
+  ...hiddenPosts.map((p) => ({
+    _source: "supabase",
+    slug: p.slug,
+    title: p.title,
+    postDate: p.post_date,
+    postDescription: p.post_description,
+    thumbs: Array.isArray(p.thumbs) ? p.thumbs : [],
+    _sortDate: new Date(p.post_date).getTime() || 0,
+  })),
+].sort((a, b) => b._sortDate - a._sortDate);
 ---
 
 <Layout title="Dzastins Zavadzkis—Works">
   <div class="works-page">
-    <div class="work-feed">
-      {works.map((work) => <WorkPreview workPost={work} />)}
+    <div class="work-feed" data-work-feed>
+      {
+        allPosts.map((post) => {
+          if (post._source === "sanity") {
+            return <WorkPreview workPost={post._raw} />;
+          }
+
+          const thumbs = post.thumbs ?? [];
+          const year = post.postDate
+            ? new Date(post.postDate).getFullYear()
+            : "";
+
+          return (
+            <a href={`/works/${post.slug}`} data-locked="true" class="locked">
+              <div class="work-preview" data-images={JSON.stringify(thumbs)}>
+                <h2 class="work-title">{post.title}</h2>
+
+                <p class="work-short-description">
+                  <span class="ticker" data-ticker>
+                    <span class="t1">{post.postDescription}</span>
+                    <span class="t2">{post.postDescription}</span>
+                  </span>
+                </p>
+
+                {thumbs.slice(0, 3).map((url) => (
+                  <img class="work-image" src={url} loading="lazy" />
+                ))}
+
+                <span class="work-year">{year}</span>
+              </div>
+            </a>
+          );
+        })
+      }
     </div>
   </div>
 
-  <!-- ✅ Overlay lives in Layout slot, so it can blur nav + footer -->
+  {/* ✅ THIS is what was missing */}
   <div
     slot="overlay"
     class="unlock-overlay"
     data-unlock-overlay
     aria-hidden="true"
   >
-    <!-- ✅ EXACT like pt-lightbox__backdrop -->
     <div class="unlock-backdrop" data-unlock-backdrop></div>
 
     <div class="unlock-modal">
       <h2 class="unlock-title">Unlock Hidden Projects</h2>
 
-      <form method="POST" action="/api/private-ui-unlock" class="unlock-form">
+      <form
+        method="POST"
+        enctype="application/x-www-form-urlencoded"
+        action="/.netlify/functions/private-ui-unlock"
+        class="unlock-form"
+        data-unlock-form
+      >
         <input
           name="password"
           type="password"
@@ -43,108 +101,29 @@ const unlocked = Astro.cookies.get("private_ui")?.value === "1";
         <button type="submit">OK</button>
       </form>
 
-      {unlockFail && <p class="unlock-error">Wrong password</p>}
+      <p class="unlock-error" data-unlock-error hidden>Wrong password</p>
     </div>
   </div>
 </Layout>
-
-<script is:inline data-astro-rerun define:vars={{ unlocked }}>
-  (() => {
-    // ✅ HttpOnly-safe: server passed boolean
-    const isUnlocked = unlocked;
-    document.documentElement.classList.toggle("works-unlocked", isUnlocked);
-
-    // Close overlay on entry
-    const overlay = document.querySelector("[data-unlock-overlay]");
-    if (overlay) {
-      overlay.classList.remove("is-open");
-      overlay.setAttribute("aria-hidden", "true");
-    }
-
-    // Bind once
-    if (window.__worksUnlockBound) return;
-    window.__worksUnlockBound = true;
-
-    function getOverlay() {
-      return document.querySelector("[data-unlock-overlay]");
-    }
-
-    function openOverlay() {
-      const ov = getOverlay();
-      if (!ov) return;
-      ov.classList.add("is-open");
-      ov.setAttribute("aria-hidden", "false");
-
-      const input = ov.querySelector("input[type='password']");
-      if (input) setTimeout(() => input.focus(), 0);
-    }
-
-    function closeOverlay() {
-      const ov = getOverlay();
-      if (!ov) return;
-      ov.classList.remove("is-open");
-      ov.setAttribute("aria-hidden", "true");
-    }
-
-    // Footer Unlock… button (Layout)
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-open-unlock]");
-      if (!btn) return;
-      openOverlay();
-    });
-
-    // Clicking locked items opens overlay instead of navigating
-    document.addEventListener("click", (e) => {
-      const a = e.target.closest("a[data-locked='true']");
-      if (!a) return;
-
-      if (document.documentElement.classList.contains("works-unlocked")) return;
-
-      e.preventDefault();
-      openOverlay();
-    });
-
-    // Click backdrop closes
-    document.addEventListener("click", (e) => {
-      const backdrop = e.target.closest("[data-unlock-backdrop]");
-      if (!backdrop) return;
-      closeOverlay();
-    });
-
-    // Escape closes
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeOverlay();
-    });
-
-    // Wrong password => open once then clean URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("unlock") === "fail") {
-      openOverlay();
-      params.delete("unlock");
-      const newUrl =
-        window.location.pathname +
-        (params.toString() ? `?${params.toString()}` : "");
-      window.history.replaceState({}, "", newUrl);
-    }
-  })();
-</script>
 
 <style lang="scss">
   .work-feed {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
-  /* ==========================
-     Overlay (PT lightbox style)
-     ========================== */
+  :global(html.works-unlocked) a.locked .work-preview {
+    filter: none;
+    opacity: 1;
+  }
 
+  /* Overlay */
   .unlock-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000000; /* ✅ above nav + footer */
+    z-index: 1000000;
     display: none;
     place-items: center;
   }
@@ -153,7 +132,6 @@ const unlocked = Astro.cookies.get("private_ui")?.value === "1";
     display: grid;
   }
 
-  /* ✅ EXACT same idea as .pt-lightbox__backdrop (blur only) */
   .unlock-backdrop {
     position: absolute;
     inset: 0;
@@ -191,11 +169,6 @@ const unlocked = Astro.cookies.get("private_ui")?.value === "1";
     backdrop-filter: var(--backdrop-filter);
     -webkit-backdrop-filter: var(--backdrop-filter);
     box-shadow: var(--box-shadow);
-
-    transition:
-      backdrop-filter 0.15s ease,
-      box-shadow 0.15s ease;
-    cursor: text;
   }
 
   .unlock-form button {
@@ -203,26 +176,13 @@ const unlocked = Astro.cookies.get("private_ui")?.value === "1";
     border-radius: var(--br);
     border: none;
     background: var(--pill-bg);
-    cursor: pointer;
     height: 42px;
 
     backdrop-filter: var(--backdrop-filter);
     -webkit-backdrop-filter: var(--backdrop-filter);
     box-shadow: var(--box-shadow);
-
-    transition:
-      backdrop-filter 0.15s ease,
-      box-shadow 0.15s ease;
     font-size: var(--fz);
-  }
-
-  .unlock-form button:hover,
-  .unlock-form input:hover,
-  .unlock-form input:focus {
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
-    backdrop-filter: var(--backdrop-filter-pressed);
-    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
-    outline: 0;
+    cursor: pointer;
   }
 
   .unlock-error {
@@ -232,11 +192,7 @@ const unlocked = Astro.cookies.get("private_ui")?.value === "1";
     text-align: center;
   }
 
-  /* ==========================
-     ✅ Prevent "shadow cloud" behind blur
-     Works even with overlay in Layout slot
-     ========================== */
-
+  /* ✅ remove "cloud glow" behind blur */
   :global(html:has(.unlock-overlay.is-open)) .work-title,
   :global(html:has(.unlock-overlay.is-open)) .work-short-description,
   :global(html:has(.unlock-overlay.is-open)) .work-year {

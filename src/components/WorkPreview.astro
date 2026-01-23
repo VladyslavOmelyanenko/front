@@ -3,11 +3,8 @@ import { urlFor } from "../lib/sanity.js";
 
 const { workPost } = Astro.props;
 
-// New shape from query:
-// workPost.images = [{ _key, size, image: { asset, url, metadata, alt, caption } }, ...]
 const images = workPost.images ?? [];
 
-// Build *thumb URLs* from Sanity assets (max width 200px)
 const thumbUrls = images
   .map((item) => item?.image?.asset)
   .filter(Boolean)
@@ -41,13 +38,13 @@ const initialImages = thumbUrls.slice(0, 3);
   </div>
 </a>
 
-<style lang="scss">
+<style lang="scss" is:global>
   @keyframes ticker {
-    0% {
-      transform: translateX(0);
+    from {
+      transform: translate3d(0, 0, 0);
     }
-    100% {
-      transform: translateX(-50%);
+    to {
+      transform: translate3d(calc(-1 * var(--ticker-distance, 0px)), 0, 0);
     }
   }
 
@@ -80,22 +77,53 @@ const initialImages = thumbUrls.slice(0, 3);
 
     .work-short-description {
       overflow: hidden;
+      flex: 1;
+      min-width: 0;
       position: relative;
 
+      /* ✅ base: centered, no animation, no flicker */
       .ticker {
+        width: max-content;
         display: inline-flex;
         white-space: nowrap;
+        justify-content: center;
+        animation: none;
+        animation-play-state: paused;
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+      }
+
+      /* ✅ always visible */
+      .t1 {
+        display: inline;
+        padding-right: 0;
+      }
+
+      /* ✅ hidden by default */
+      .t2 {
+        display: none;
+        padding-right: 40px;
+      }
+
+      /* ✅ only scroll when JS adds class */
+      .ticker.is-scrolling {
+        justify-content: flex-start;
         animation: ticker var(--ticker-duration, 12s) linear infinite;
         animation-play-state: paused;
       }
 
-      .t1,
-      .t2 {
+      .ticker.is-scrolling .t1 {
         padding-right: 40px;
+      }
+
+      .ticker.is-scrolling .t2 {
+        display: inline;
       }
     }
 
-    &:hover .work-short-description .ticker {
+    /* ✅ run only on hover (desktop) */
+    &:hover .work-short-description .ticker.is-scrolling {
       animation-play-state: running;
     }
 
@@ -107,18 +135,57 @@ const initialImages = thumbUrls.slice(0, 3);
       object-fit: cover;
     }
   }
-  a.locked .work-preview {
-    // opacity: 0.5;
-    pointer-events: auto;
 
-    .work-title, .work-short-description, .work-year {
-      filter: blur(3px);
+  /* ===========================
+   LOCKED: disable hover effects
+=========================== */
+  a.locked .work-preview {
+    .work-title,
+    .work-short-description,
+    .work-year {
+      color: #d9d9d9;
+      cursor: not-allowed;
     }
   }
 
-  :global(html.works-unlocked) a.locked .work-preview {
-    // filter: none;
-    opacity: 1;
+  a.locked .work-preview:hover {
+    .work-title,
+    .work-short-description,
+    .work-year {
+      box-shadow: var(--box-shadow);
+    }
+  }
+
+  a.locked .work-preview:hover .work-short-description .ticker {
+    animation-play-state: paused !important;
+  }
+
+  /* ===========================
+   UNLOCKED: behave normal again
+=========================== */
+  html.works-unlocked a.locked .work-preview {
+    .work-title,
+    .work-short-description,
+    .work-year {
+      color: black;
+      cursor: pointer;
+    }
+  }
+
+  html.works-unlocked a.locked .work-preview:hover {
+    .work-title,
+    .work-short-description,
+    .work-year {
+      box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+    }
+  }
+
+  html.works-unlocked
+    a.locked
+    .work-preview:hover
+    .work-short-description
+    .ticker.is-scrolling {
+    animation-play-state: running !important;
   }
 
   @media (max-width: 768px) {

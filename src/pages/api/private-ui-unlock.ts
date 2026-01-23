@@ -10,15 +10,14 @@ export async function POST({ request, redirect }) {
 
   const isProd = import.meta.env.PROD;
 
-  // ✅ SESSION cookie (no Max-Age / Expires)
-  // ✅ HttpOnly (JS cannot read it)
-  // ✅ Secure only in prod (Netlify HTTPS)
+  // ✅ 10 minutes = 600 seconds
   const cookie = [
     "private_ui=1",
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",
-    isProd ? "Secure" : "",
+    "Max-Age=600", // ✅ auto lock after 10 minutes
+    isProd ? "Secure" : "", // ✅ only on https
   ]
     .filter(Boolean)
     .join("; ");

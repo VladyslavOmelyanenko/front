@@ -1,150 +1,74 @@
 ---
-export const prerender = false;
-
 import Layout from "../../layouts/Layout.astro";
 import NavForPost from "../../components/NavForPost.astro";
 import Feed from "../../components/Feed.astro";
-import { client } from "../../lib/sanity.js";
 import Post from "../../components/Post.astro";
+
+import { client } from "../../lib/sanity.js";
 import { getWorkPost as getPostBySlug } from "../../data/works";
-import { PortableText } from "@portabletext/react";
 
-// ✅ SSR: use params, not props
-const { slug } = Astro.params;
+import { createClient } from "@supabase/supabase-js";
+import PrivatePostClient from "../../components/PrivatePostContent"
 
-// If slug missing (shouldn't happen), go back
-if (!slug) return Astro.redirect("/works");
+export async function getStaticPaths() {
+  const publicSlugs = await client.fetch(`
+    *[_type == "post"
+      && postType == "work"
+      && defined(slug.current)
+      && !(_id in path("drafts.**"))
+    ]{
+      "slug": slug.current
+    }
+  `);
 
-const post = await getPostBySlug(slug);
-if (!post) return Astro.redirect("/404");
+  const supabase = createClient(
+    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
 
-// ✅ Option 1 lock: block locked posts unless cookie exists
-const locked = post.isHidden === true;
-const unlocked = Astro.cookies.get("private_ui")?.value === "1";
+  const { data: hiddenSlugs } = await supabase
+    .from("private_posts_preview")
+    .select("slug");
 
-if (locked && !unlocked) {
-  return Astro.redirect("/works");
+  const all = [
+    ...(publicSlugs || []).map((x) => x.slug),
+    ...(hiddenSlugs || []).map((x) => x.slug),
+  ];
+
+  const unique = [...new Set(all)];
+
+  return unique.map((slug) => ({ params: { slug } }));
 }
 
-const baseDate = post.postDate;
-const postType = post.postType ?? "work";
+const { slug } = Astro.params;
 
-const neighbors = baseDate
-  ? await client.fetch(
-      `
-      {
-        "prev": *[_type=="post"
-          && postType == $type
-          && defined(slug.current)
-          && defined(postDate)
-          && !(_id in path("drafts.**"))
-          && postDate < $d]
-          | order(postDate desc)[0]{
-            title,
-            "slug": slug.current
-          },
-
-        "next": *[_type=="post"
-          && postType == $type
-          && defined(slug.current)
-          && defined(postDate)
-          && !(_id in path("drafts.**"))
-          && postDate > $d]
-          | order(postDate asc)[0]{
-            title,
-            "slug": slug.current
-          }
-      }
-      `,
-      { type: postType, d: baseDate }
-    )
-  : { prev: null, next: null };
-
-const prev = neighbors?.prev ?? null;
-const next = neighbors?.next ?? null;
-
-const baseRoute = postType === "blog" ? "/blog" : "/works";
-const hasCredit = !!post?.creditbox?.length;
+const post = await getPostBySlug(slug);
+const isPublic = !!post;
 ---
 
-<Layout title={`Dzastins Zavadzkis—${post.title}`}>
-  <div class="post-page">
-    <Feed>
-      <NavForPost title={post.title} />
-      <Post post={post} />
+{
+  isPublic ? (
+    <Layout title={`Dzastins Zavadzkis—${post.title}`}>
+      <div class="post-page">
+        <Feed>
+          <NavForPost title={post.title} />
+          <Post post={post} />
+        </Feed>
+      </div>
+    </Layout>
+  ) : (
+    <Layout title="Dzastins Zavadzkis—Hidden Project">
+      <div class="post-page">
+        <Feed>
+          <NavForPost title="Hidden Project" />
 
-      <nav class="post-pagination" aria-label="Blog post navigation">
-        <!-- LEFT: creditbox (if present), otherwise Previous like before -->
-        {
-          hasCredit ? (
-            <div class="creditbox" aria-label="Credits">
-              <PortableText value={post.creditbox} />
-            </div>
-          ) : prev ? (
-            <a
-              class="page-btn prev"
-              href={`${baseRoute}/${prev.slug}`}
-              aria-label="Previous post"
-            >
-              ← Previous
-            </a>
-          ) : (
-            <span class="page-btn disabled" aria-hidden="true">
-              ← Previous
-            </span>
-          )
-        }
-
-        <!-- RIGHT: if credit exists, stack Previous on top of Next -->
-        {
-          hasCredit ? (
-            <div class="right-stack">
-              {prev ? (
-                <a
-                  class="page-btn prev"
-                  href={`${baseRoute}/${prev.slug}`}
-                  aria-label="Previous post"
-                >
-                  ← Previous
-                </a>
-              ) : (
-                <span class="page-btn disabled" aria-hidden="true">
-                  ← Previous
-                </span>
-              )}
-
-              {next ? (
-                <a
-                  class="page-btn next"
-                  href={`${baseRoute}/${next.slug}`}
-                  aria-label="Next post"
-                >
-                  Next →
-                </a>
-              ) : (
-                <span class="page-btn disabled" aria-hidden="true">
-                  Next →
-                </span>
-              )}
-            </div>
-          ) : next ? (
-            <a
-              class="page-btn next"
-              href={`${baseRoute}/${next.slug}`}
-              aria-label="Next post"
-            >
-              Next →
-            </a>
-          ) : (
-            <span class="page-btn disabled" aria-hidden="true">
-              Next →
-            </span>
-          )
-        }
-      </nav>
-    </Feed>
-  </div>
-</Layout>
+          {/* ✅ this now renders the same UI as Sanity (PostContent) */}
+          <PrivatePostClient client:load />
+        </Feed>
+      </div>
+    </Layout>
+  )
+}
 
 <style lang="scss">
   .post-page {

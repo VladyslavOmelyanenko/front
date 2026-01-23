@@ -50,19 +50,18 @@ const isDetail =
     <main class="main-container">
       <slot />
     </main>
-    
+
     <slot name="overlay" />
 
     <div class="footer">
-      <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
-
       {
         segments[0] === "works" && segments.length === 1 ? (
-          <button class="works-unlock-link" type="button" data-open-unlock>
+          <a class="works-unlock-link" href="/works?unlock=open">
             Unlock…
-          </button>
+          </a>
         ) : null
       }
+      <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
     </div>
 
     <!-- Scripts -->
@@ -70,6 +69,7 @@ const isDetail =
     <script src="/scripts/work-previews.js" is:inline></script>
     <script src="/scripts/blog-previews.js" is:inline></script>
 
+    <script src="/scripts/works-unlock.js" is:inline></script>
     <!-- ✅ CSS-only-ish fade: re-trigger on Astro swaps -->
     <script is:inline>
       (function () {
@@ -189,6 +189,10 @@ const isDetail =
   .main-container:has(.works-page) .works-page {
     min-height: auto;
     padding: 0;
+  }
+
+  :global(html.works-unlocked) .works-unlock-link {
+    display: none;
   }
 
   @media (max-width: 768px) {

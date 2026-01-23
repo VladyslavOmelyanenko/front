@@ -36,18 +36,25 @@ function hash32(str) {
 ------------------------------------------------------- */
 function SanityImage({ value }) {
   // Supports:
-  // - contentImage: { _type:"contentImage", size, image:{asset, alt, caption} }
-  // - plain image/captionedImage: { asset, alt, caption }
+  // - Sanity contentImage: { _type:"contentImage", size, image:{asset, alt, caption} }
+  // - Sanity plain image/captionedImage: { asset, alt, caption }
+  // - Supabase: { image:{ url, alt, caption } } or { url, alt, caption }
+
   const img = value?.image ?? value;
-  const asset = img?.asset;
-  if (!asset) return null;
 
   const size =
     value?._type === "contentImage" ? value?.size || "l" : value?.size || "l";
 
-  const src = urlFor(asset).width(1800).auto("format").quality(85).url();
   const alt = img?.alt || img?.caption || "";
   const caption = img?.caption || null;
+
+  // ✅ pick src from Supabase first, then Sanity asset
+  let src = img?.url || "";
+  if (!src && img?.asset) {
+    src = urlFor(img.asset).width(1800).auto("format").quality(85).url();
+  }
+
+  if (!src) return null;
 
   const widthPct = size === "s" ? "33.333%" : size === "m" ? "66.666%" : "100%";
 
@@ -61,7 +68,7 @@ function SanityImage({ value }) {
         alt={alt}
         loading="lazy"
         decoding="async"
-        data-caption={caption ?? ""} // ✅ ADD THIS
+        data-caption={caption ?? ""}
         style={{
           width: "100%",
           height: "auto",
@@ -74,6 +81,7 @@ function SanityImage({ value }) {
     </figure>
   );
 }
+
 
 /* -------------------------------------------------------
    Link mark (no href => no anchor, avoids scroll-to-top)
@@ -139,22 +147,37 @@ function CarouselBlock({ value }) {
     if (imgs.length < 2) return;
 
     // Build items (url + caption + alt)
-    const items =
-      (value?.images || [])
-        .map((img) => {
-          const ref = img?.asset?._ref || img?.asset?._id;
-          if (!ref) return null;
-          return {
-            url: urlFor({ _ref: ref })
-              .width(1920)
-              .auto("format")
-              .quality(85)
-              .url(),
-            caption: img?.caption || "",
-            alt: img?.alt || img?.caption || "",
-          };
-        })
-        .filter(Boolean) || [];
+const items =
+  (value?.images || [])
+    .map((img) => {
+      // ✅ Sanity asset
+      const ref = img?.asset?._ref || img?.asset?._id;
+      if (ref) {
+        return {
+          url: urlFor({ _ref: ref })
+            .width(1920)
+            .auto("format")
+            .quality(85)
+            .url(),
+          caption: img?.caption || "",
+          alt: img?.alt || img?.caption || "",
+        };
+      }
+
+      // ✅ Supabase direct url
+      const directUrl = img?.url || img?.image?.url;
+      if (directUrl) {
+        return {
+          url: directUrl,
+          caption: img?.caption || img?.image?.caption || "",
+          alt: img?.alt || img?.image?.alt || img?.caption || "",
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) || [];
+
 
     if (!items.length) return;
 

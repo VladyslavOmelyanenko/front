@@ -48,12 +48,11 @@ const dateText = (() => {
     position: relative;
   }
 
-  .post-container {
+  :global(.post-container) {
     padding-top: var(--pt);
-    height: calc(100vh);
-    overflow: scroll;
   }
-  .title-bar {
+
+  :global(.title-bar) {
     display: flex;
     justify-content: space-between;
     align-items: center;
