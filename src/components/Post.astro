@@ -46,6 +46,7 @@ const dateText = (() => {
   .post-content {
     width: 100%;
     position: relative;
+    gap: 40px;
   }
 
   :global(.post-container) {
@@ -69,16 +70,21 @@ const dateText = (() => {
     margin: 0 !important;
     border-radius: var(--br);
     cursor: zoom-in;
+    padding-top: 40px;
+    padding-bottom: 40px;
+
   }
 
   :global(.post-content p) {
     white-space: pre-wrap;
     min-height: 16px;
+
   }
 
   :global(.post-content strong) {
     font-weight: normal;
     font-size: 32px;
+
   }
 
   :global(.post-content blockquote) {
@@ -99,6 +105,7 @@ const dateText = (() => {
   :global(.post-content .pt-block) {
     margin: 0 0 calc(var(--lh) / 2);
     white-space: pre-wrap;
+
   }
 
   :global(.post-content .footnote-text) {
@@ -169,6 +176,10 @@ const dateText = (() => {
     border-radius: var(--br);
     overflow: hidden;
     cursor: e-resize;
+    margin-top: 40px;
+   margin-bottom: 40px;
+    
+  
   }
 
   :global(.post-content .pt-carousel-img) {

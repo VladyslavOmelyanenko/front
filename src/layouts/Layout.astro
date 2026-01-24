@@ -57,11 +57,11 @@ const isDetail =
       {
         segments[0] === "works" && segments.length === 1 ? (
           <a class="works-unlock-link" href="/works?unlock=open">
-            Unlock…
+            Unlock Hidden Works
           </a>
         ) : null
       }
-      <div class="copyright"><a href="/">© 2025, Dzastins Zavadzkis</a></div>
+      <div class="copyright"><a href="/">© 2025, Dzastins Zavadskis</a></div>
     </div>
 
     <!-- Scripts -->
@@ -106,7 +106,6 @@ const isDetail =
   .main-container {
     width: var(--column-width);
     margin-left: calc((100% - var(--column-width)) / 2);
-    min-height: 100vh;
     opacity: 0;
     animation: mainFadeIn 140ms ease-out forwards;
     will-change: opacity;
@@ -134,6 +133,7 @@ const isDetail =
     right: 20px;
     z-index: 9999;
     font-size: 12px;
+    line-height: 18px;
     display: flex;
     flex-direction: column;
   }
@@ -152,7 +152,6 @@ const isDetail =
     .main-container {
       width: 90%;
       margin-left: 5%;
-      padding-top: 110px;
     }
 
     .footer {
@@ -161,30 +160,32 @@ const isDetail =
       bottom: 4px;
       transform-origin: bottom right;
       transform: rotate(-90deg) translateX(100%);
+      flex-direction: row-reverse;
+      gap:12px;
     }
   }
 
   .main-container:has(.works-page) {
-    min-height: 100vh;
     padding-top: 0;
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
+    padding-top: var(--pt);
   }
 
-  .main-container:has(.works-page)::before,
-  .main-container:has(.works-page)::after {
-    content: "";
-    flex: 1 1 0;
-  }
+  // .main-container:has(.works-page)::before,
+  // .main-container:has(.works-page)::after {
+  //   content: "";
+  //   flex: 1 1 0;
+  // }
 
-  .main-container:has(.works-page)::before {
-    min-height: var(--pt);
-  }
+  // .main-container:has(.works-page)::before {
+  //   min-height: var(--pt);
+  // }
 
-  .main-container:has(.works-page)::after {
-    min-height: 50px;
-  }
+  // .main-container:has(.works-page)::after {
+  //   min-height: 50px;
+  // }
 
   .main-container:has(.works-page) .works-page {
     min-height: auto;

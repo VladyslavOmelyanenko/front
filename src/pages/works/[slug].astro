@@ -8,9 +8,11 @@ import { client } from "../../lib/sanity.js";
 import { getWorkPost as getPostBySlug } from "../../data/works";
 
 import { createClient } from "@supabase/supabase-js";
-import PrivatePostClient from "../../components/PrivatePostContent"
+import PrivatePostClient from "../../components/PrivatePostContent.jsx";
+import { PortableText } from "@portabletext/react";
 
 export async function getStaticPaths() {
+  // ✅ Sanity public works
   const publicSlugs = await client.fetch(`
     *[_type == "post"
       && postType == "work"
@@ -21,9 +23,10 @@ export async function getStaticPaths() {
     }
   `);
 
+  // ✅ Supabase hidden works
   const supabase = createClient(
     import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
   const { data: hiddenSlugs } = await supabase
@@ -42,33 +45,151 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
+// ✅ Try Sanity first
 const post = await getPostBySlug(slug);
 const isPublic = !!post;
+
+// ✅ Pagination + creditbox only for public Sanity posts
+let prev = null;
+let next = null;
+
+if (isPublic) {
+  const baseDate = post.postDate;
+  const postType = post.postType ?? "work";
+
+  const neighbors = baseDate
+    ? await client.fetch(
+        `
+        {
+          "prev": *[_type=="post"
+            && postType == $type
+            && defined(slug.current)
+            && defined(postDate)
+            && !(_id in path("drafts.**"))
+            && postDate < $d]
+            | order(postDate desc)[0]{
+              title,
+              "slug": slug.current
+            },
+
+          "next": *[_type=="post"
+            && postType == $type
+            && defined(slug.current)
+            && defined(postDate)
+            && !(_id in path("drafts.**"))
+            && postDate > $d]
+            | order(postDate asc)[0]{
+              title,
+              "slug": slug.current
+            }
+        }
+        `,
+        { type: postType, d: baseDate }
+      )
+    : { prev: null, next: null };
+
+  prev = neighbors?.prev ?? null;
+  next = neighbors?.next ?? null;
+}
+
+const hasCredit = !!post?.creditbox?.length;
 ---
 
-{
-  isPublic ? (
-    <Layout title={`Dzastins Zavadzkis—${post.title}`}>
-      <div class="post-page">
-        <Feed>
-          <NavForPost title={post.title} />
-          <Post post={post} />
-        </Feed>
-      </div>
-    </Layout>
-  ) : (
-    <Layout title="Dzastins Zavadzkis—Hidden Project">
-      <div class="post-page">
-        <Feed>
-          <NavForPost title="Hidden Project" />
+{isPublic ? (
+  <Layout title={`Dzastins Zavadzkis—${post.title}`}>
+    <div class="post-page">
+      <Feed>
+        <NavForPost title={post.title} />
+        <Post post={post} />
 
-          {/* ✅ this now renders the same UI as Sanity (PostContent) */}
-          <PrivatePostClient client:load />
-        </Feed>
-      </div>
-    </Layout>
-  )
-}
+        <nav class="post-pagination" aria-label="Work post navigation">
+          {/* LEFT */}
+          {hasCredit ? (
+            <div class="creditbox" aria-label="Credits">
+              <PortableText value={post.creditbox} />
+            </div>
+          ) : prev ? (
+            <a class="page-btn prev" href={`/works/${prev.slug}`}>
+              ← Previous
+            </a>
+          ) : (
+            <span class="page-btn disabled">← Previous</span>
+          )}
+
+          {/* RIGHT */}
+          {hasCredit ? (
+            <div class="right-stack">
+              {prev ? (
+                <a class="page-btn prev" href={`/works/${prev.slug}`}>
+                  ← Previous
+                </a>
+              ) : (
+                <span class="page-btn disabled">← Previous</span>
+              )}
+
+              {next ? (
+                <a class="page-btn next" href={`/works/${next.slug}`}>
+                  Next →
+                </a>
+              ) : (
+                <span class="page-btn disabled">Next →</span>
+              )}
+            </div>
+          ) : next ? (
+            <a class="page-btn next" href={`/works/${next.slug}`}>
+              Next →
+            </a>
+          ) : (
+            <span class="page-btn disabled">Next →</span>
+          )}
+        </nav>
+      </Feed>
+    </div>
+  </Layout>
+) : (
+  <Layout title="Dzastins Zavadzkis—Hidden Project">
+    <div class="post-page">
+      <Feed>
+        <NavForPost title="Hidden Project" />
+
+        {/* ✅ Locked UI (client decides if unlocked) */}
+        <div class="private-wrapper">
+          <div class="private-locked" data-private-locked>
+            <p>This project is locked.</p>
+            <a class="page-btn" href="/works">Go to Works → Unlock</a>
+          </div>
+
+          {/* ✅ actual private post UI (only show when unlocked) */}
+          <div class="private-post" data-private-post>
+            <PrivatePostClient slug={slug} client:load />
+          </div>
+        </div>
+      </Feed>
+    </div>
+
+    {/* ✅ localStorage unlock check */}
+    <script is:inline>
+      (function () {
+        const KEY = "private_ui_until";
+        const until = Number(localStorage.getItem(KEY) || 0);
+        const unlocked = Date.now() < until;
+
+        const lockedEl = document.querySelector("[data-private-locked]");
+        const postEl = document.querySelector("[data-private-post]");
+
+        if (!lockedEl || !postEl) return;
+
+        if (unlocked) {
+          lockedEl.style.display = "none";
+          postEl.style.display = "block";
+        } else {
+          lockedEl.style.display = "block";
+          postEl.style.display = "none";
+        }
+      })();
+    </script>
+  </Layout>
+)}
 
 <style lang="scss">
   .post-page {
@@ -80,11 +201,10 @@ const isPublic = !!post;
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    align-items: flex-start; /* allow right stack height */
+    align-items: flex-start;
   }
 
   .page-btn {
-    // background: var(--gray);
     height: 42px;
     border-radius: var(--br);
     padding: 0px 14px;
@@ -96,12 +216,11 @@ const isPublic = !!post;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
     box-shadow: var(--box-shadow);
     backdrop-filter: var(--backdrop-filter);
     -webkit-backdrop-filter: var(--backdrop-filter);
-    transition:
-      backdrop-filter 0.15s ease,
-      box-shadow 0.15s ease;
+    transition: backdrop-filter 0.15s ease, box-shadow 0.15s ease;
   }
 
   .page-btn:hover {
@@ -113,7 +232,6 @@ const isPublic = !!post;
     pointer-events: none;
   }
 
-  /* RIGHT stack: Previous above Next */
   .right-stack {
     display: flex;
     flex-direction: column;
@@ -126,7 +244,6 @@ const isPublic = !!post;
     max-width: 100%;
   }
 
-  /* Creditbox stays on left */
   .creditbox {
     max-width: 48%;
     white-space: normal;
@@ -144,5 +261,21 @@ const isPublic = !!post;
   .creditbox :global(a) {
     text-decoration: underline;
     color: var(--gray);
+  }
+
+  /* ✅ Private lock wrapper */
+  .private-wrapper {
+    margin-top: 20px;
+  }
+
+  .private-locked {
+    display: none;
+    text-align: center;
+    font-size: calc(var(--fz) * 0.75);
+    opacity: 0.8;
+  }
+
+  .private-post {
+    display: none;
   }
 </style>

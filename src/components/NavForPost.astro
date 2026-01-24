@@ -107,7 +107,7 @@ const parent = "/" + pathname.split("/")[1];
     display: inline-flex;
     align-items: stretch;
     overflow: hidden;
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.35);
     position: relative;
 
     /* allow shrinking inside flex + obey max-width set by JS */
@@ -115,16 +115,16 @@ const parent = "/" + pathname.split("/")[1];
   }
 
   .nav-post-title {
-    padding: 0 14px;
+    padding: 0px 14px 3px;
     height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #000;
+    color: #000000;
     white-space: nowrap;
-    background: rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 
     /* needed for truncation + shrink-to-fit */
     min-width: 0;
@@ -136,13 +136,14 @@ const parent = "/" + pathname.split("/")[1];
   .close-button-container {
     width: 36px;
     height: 36px;
+    padding-bottom: 3px;
     position: relative;
     overflow: hidden; /* clip rounded highlight */
     border-radius: var(--br);
-    background: rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    box-shadow: 0 0 3px rgba(122, 122, 122, 0.9);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.35);
     cursor: pointer;
     transition:
       box-shadow 0.15s ease,
@@ -176,6 +177,7 @@ const parent = "/" + pathname.split("/")[1];
   /* Hover effect */
   .close-button-container:hover {
     box-shadow: none;
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
