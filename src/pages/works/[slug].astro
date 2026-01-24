@@ -89,7 +89,26 @@ if (isPublic) {
     : { prev: null, next: null };
 
   prev = neighbors?.prev ?? null;
-  next = neighbors?.next ?? null;
+  // ✅ WRAP: if no prev (oldest post), send to newest post
+  if (!prev) {
+    prev = await client.fetch(
+      `
+      *[_type=="post"
+        && postType == $type
+        && defined(slug.current)
+        && defined(postDate)
+        && !(_id in path("drafts.**"))
+        && slug.current != $slug
+      ]
+      | order(postDate desc)[0]{
+        title,
+        "slug": slug.current
+      }
+      `,
+      { type: postType, slug }
+    );
+  }
+
 }
 
 const hasCredit = !!post?.creditbox?.length;
@@ -102,43 +121,23 @@ const hasCredit = !!post?.creditbox?.length;
         <NavForPost title={post.title} />
         <Post post={post} />
 
-        <nav class="post-pagination" aria-label="Work post navigation">
-          {/* LEFT */}
-          {hasCredit ? (
-            <div class="creditbox" aria-label="Credits">
-              <PortableText value={post.creditbox} />
-            </div>
-          ) : prev ? (
-            <a class="page-btn prev" href={`/works/${prev.slug}`}>
-              ← Previous
-            </a>
-          ) : (
-            <span class="page-btn disabled">← Previous</span>
-          )}
+      <nav class="post-pagination" aria-label="Work post navigation">
+        {/* LEFT */}
+        {hasCredit ? (
+          <div class="creditbox" aria-label="Credits">
+            <PortableText value={post.creditbox} />
+          </div>
+        ) : null}
 
-          {/* RIGHT */}
-          {hasCredit ? (
-            <div class="right-stack">
-            {
-              prev ? (
-                <nav class="post-pagination" aria-label="Work post navigation">
-                  <a class="prev-only" href={`/works/${prev.slug}`} aria-label="Previous project">
-                    <span class="label">{prev.title}</span>
-                    <span class="arrow">→</span>
-                  </a>
-                </nav>
-              ) : null
-            }
+        {/* RIGHT */}
+        {prev ? (
+          <a class="prev-only" href={`/works/${prev.slug}`} aria-label="Previous project">
+            <span class="label">{prev.title}</span>
+            <span class="arrow">→</span>
+          </a>
+        ) : null}
+      </nav>
 
-            </div>
-          ) : next ? (
-            <a class="page-btn next" href={`/works/${next.slug}`}>
-              Next →
-            </a>
-          ) : (
-            <span class="page-btn disabled">Next →</span>
-          )}
-        </nav>
       </Feed>
     </div>
   </Layout>
@@ -196,6 +195,8 @@ const hasCredit = !!post?.creditbox?.length;
   margin-top: 40px;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .prev-only {
@@ -209,7 +210,7 @@ const hasCredit = !!post?.creditbox?.length;
   align-items: center;
   gap: 10px;
 
-  max-width: 100%;
+  max-width: 48%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -227,14 +228,15 @@ const hasCredit = !!post?.creditbox?.length;
   -webkit-backdrop-filter: var(--backdrop-filter-pressed);
 }
 
-.prev-only .arrow {
-  flex: 0 0 auto;
-}
-
 .prev-only .label {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.prev-only .arrow {
+  flex: 0 0 auto;
+}
+
 
 
   .creditbox {
