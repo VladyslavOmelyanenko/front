@@ -119,21 +119,17 @@ const hasCredit = !!post?.creditbox?.length;
           {/* RIGHT */}
           {hasCredit ? (
             <div class="right-stack">
-              {prev ? (
-                <a class="page-btn prev" href={`/works/${prev.slug}`}>
-                  ← Previous
-                </a>
-              ) : (
-                <span class="page-btn disabled">← Previous</span>
-              )}
+            {
+              prev ? (
+                <nav class="post-pagination" aria-label="Work post navigation">
+                  <a class="prev-only" href={`/works/${prev.slug}`} aria-label="Previous project">
+                    <span class="label">{prev.title}</span>
+                    <span class="arrow">→</span>
+                  </a>
+                </nav>
+              ) : null
+            }
 
-              {next ? (
-                <a class="page-btn next" href={`/works/${next.slug}`}>
-                  Next →
-                </a>
-              ) : (
-                <span class="page-btn disabled">Next →</span>
-              )}
             </div>
           ) : next ? (
             <a class="page-btn next" href={`/works/${next.slug}`}>
@@ -197,52 +193,49 @@ const hasCredit = !!post?.creditbox?.length;
   }
 
   .post-pagination {
-    margin-top: 40px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: flex-start;
-  }
+  margin-top: 40px;
+  display: flex;
+  justify-content: space-between;
+}
 
-  .page-btn {
-    height: 42px;
-    border-radius: var(--br);
-    padding: 0px 14px;
-    text-decoration: none;
-    color: #000;
-    display: inline-flex;
-    align-items: center;
-    max-width: 48%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.prev-only {
+  height: 42px;
+  border-radius: var(--br);
+  padding: 0 14px;
+  text-decoration: none;
+  color: #000;
 
-    box-shadow: var(--box-shadow);
-    backdrop-filter: var(--backdrop-filter);
-    -webkit-backdrop-filter: var(--backdrop-filter);
-    transition: backdrop-filter 0.15s ease, box-shadow 0.15s ease;
-  }
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 
-  .page-btn:hover {
-    box-shadow: 0 0 0 rgba(122, 122, 122, 0.9);
-  }
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
-  .page-btn.disabled {
-    opacity: 0.35;
-    pointer-events: none;
-  }
+  box-shadow: var(--box-shadow);
+  backdrop-filter: var(--backdrop-filter);
+  -webkit-backdrop-filter: var(--backdrop-filter);
 
-  .right-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    max-width: 48%;
-  }
+  transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
+}
 
-  .right-stack .page-btn {
-    max-width: 100%;
-  }
+.prev-only:hover {
+  box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+  backdrop-filter: var(--backdrop-filter-pressed);
+  -webkit-backdrop-filter: var(--backdrop-filter-pressed);
+}
+
+.prev-only .arrow {
+  flex: 0 0 auto;
+}
+
+.prev-only .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 
   .creditbox {
     max-width: 48%;
