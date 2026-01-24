@@ -8,7 +8,11 @@ import { getWorkPost as getPostBySlug } from "../../data/works";
 
 export async function getStaticPaths() {
   const slugs = await client.fetch(`
-    *[_type == "post" && postType == "blog" && defined(slug.current) && !(_id in path("drafts.**"))]{
+    *[_type == "post"
+      && postType == "blog"
+      && defined(slug.current)
+      && !(_id in path("drafts.**"))
+    ]{
       "slug": slug.current
     }
   `);
@@ -23,41 +27,47 @@ const { postSlug } = Astro.props;
 const post = await getPostBySlug(postSlug);
 if (!post) return Astro.redirect("/404");
 
-// Force blog-only navigation neighbors
+// ✅ Use postDate or fallback to created date
 const baseDate = post.postDate ?? post._createdAt;
 
-const neighbors = await client.fetch(
+// ✅ Find "previous" blog post (older)
+let prev = await client.fetch(
   `
-  {
-    "prev": *[_type=="post"
-      && postType == "blog"
-      && defined(slug.current)
-      && !(_id in path("drafts.**"))
-      && coalesce(postDate, _createdAt) < $d]
-      | order(coalesce(postDate, _createdAt) desc)[0]{
-        title,
-        "slug": slug.current,
-        postDate
-      },
-
-    "next": *[_type=="post"
-      && postType == "blog"
-      && defined(slug.current)
-      && !(_id in path("drafts.**"))
-      && coalesce(postDate, _createdAt) > $d]
-      | order(coalesce(postDate, _createdAt) asc)[0]{
-        title,
-        "slug": slug.current,
-        postDate
-      }
-  }
+  *[_type=="post"
+    && postType == "blog"
+    && defined(slug.current)
+    && !(_id in path("drafts.**"))
+    && coalesce(postDate, _createdAt) < $d]
+    | order(coalesce(postDate, _createdAt) desc)[0]{
+      title,
+      "slug": slug.current,
+      postDate
+    }
   `,
-  { d: baseDate }
+  { d: baseDate },
 );
 
-const prev = neighbors?.prev ?? null;
-const next = neighbors?.next ?? null;
+// ✅ WRAP: if no prev (you are on oldest blog post) -> go to newest
+if (!prev) {
+  prev = await client.fetch(
+    `
+    *[_type=="post"
+      && postType=="blog"
+      && defined(slug.current)
+      && !(_id in path("drafts.**"))
+      && slug.current != $current
+    ]
+    | order(coalesce(postDate, _createdAt) desc)[0]{
+      title,
+      "slug": slug.current,
+      postDate
+    }
+    `,
+    { current: postSlug },
+  );
+}
 
+// ✅ Display date (fallback works too)
 const postDate = (() => {
   const d = new Date(post.postDate ?? post._createdAt);
   return d.toLocaleDateString("en-US", {
@@ -73,80 +83,78 @@ const displayTitle =
 
 <Layout title={`Dzastins Zavadzkis—${postDate}`}>
   <NavForPost title={displayTitle} />
+
   <div class="post-page">
     <Feed>
       <Post post={post} />
 
-      <nav class="post-pagination" aria-label="Blog post navigation">
-        {
-          prev ? (
+      {
+        prev ? (
+          <nav class="post-pagination" aria-label="Blog post navigation">
             <a
-              class="page-btn prev"
+              class="prev-only"
               href={`/blog/${prev.slug}`}
               aria-label="Previous post"
+              title={prev.title}
             >
-              ← Previous
+              <span class="label">{prev.title}</span>
+              <span class="arrow">→</span>
             </a>
-          ) : (
-            <span class="page-btn disabled" aria-hidden="true">
-              ← Previous
-            </span>
-          )
-        }
-
-        {
-          next ? (
-            <a
-              class="page-btn next"
-              href={`/blog/${next.slug}`}
-              aria-label="Next post"
-            >
-              Next →
-            </a>
-          ) : (
-            <span class="page-btn disabled" aria-hidden="true">
-              Next →
-            </span>
-          )
-        }
-      </nav>
+          </nav>
+        ) : null
+      }
     </Feed>
   </div>
 </Layout>
 
 <style lang="scss">
   .post-page {
-    // padding-top: var(--pt);
     padding-bottom: 40px;
   }
+
   .post-pagination {
     margin-top: 40px;
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-end;
   }
 
-  .page-btn {
-    background: var(--gray);
-    border-radius: var(--br);
-    padding: 0px 14px;
+  .prev-only {
     height: 42px;
+    border-radius: var(--br);
+    padding: 0 14px;
     text-decoration: none;
     color: #000;
+
     display: inline-flex;
     align-items: center;
-    max-width: 48%;
+    gap: 10px;
+
+    max-width: 100%;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    box-shadow: var(--box-shadow);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
+
+    transition:
+      box-shadow 0.15s ease,
+      backdrop-filter 0.15s ease;
+  }
+
+  .prev-only:hover {
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+    backdrop-filter: var(--backdrop-filter-pressed);
+    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
+  }
+
+  .prev-only .label {
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .page-btn:hover {
-    background: var(--highlight-gray);
-  }
-
-  .page-btn.disabled {
-    opacity: 0.35;
-    pointer-events: none;
+  .prev-only .arrow {
+    flex: 0 0 auto;
   }
 </style>
