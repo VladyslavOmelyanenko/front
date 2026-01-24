@@ -38,20 +38,15 @@ const dateText = (() => {
 </div>
 
 <style lang="scss">
-  /* Remove this import once you define these globally:
-     :root { --br: 3px; --gray: #e9e9e9; --fz: 22px; --lh: 25px; --footnote-gray: rgb(150,150,150); --column-width: 780px; }
-  */
-  /* @import "../styles/_variables.scss"; */
-
   .post-content {
     width: 100%;
     position: relative;
-    gap: 40px;
   }
 
+  /* page wrapper */
   :global(.post-container) {
     padding-top: var(--pt);
-    min-height: calc(100vh);
+    min-height: 100vh;
   }
 
   :global(.title-bar) {
@@ -61,38 +56,22 @@ const dateText = (() => {
     margin-bottom: 20px;
   }
 
-  :global(.post-content img) {
-    width: 100%;
-    border-radius: 4px;
-  }
-
-  /* override for PT images so wrapper controls spacing */
-  :global(.post-content .pt-image img) {
-    margin: 0 !important;
-    border-radius: var(--br);
-    cursor: zoom-in;
-    padding-top: 40px;
-    padding-bottom: 40px;
-
-  }
-
+  /* -------------------------------
+   ✅ BASE TYPOGRAPHY
+-------------------------------- */
   :global(.post-content p) {
     white-space: pre-wrap;
     min-height: 16px;
-
   }
 
   :global(.post-content strong) {
     font-weight: normal;
     font-size: 32px;
-
   }
 
   :global(.post-content blockquote) {
     font-weight: normal;
     width: 100%;
-
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,37 +80,130 @@ const dateText = (() => {
     padding: 40px 0 40px 40px;
   }
 
-  /* === SHARED FOOTNOTE STYLES === */
-
+  /* PortableText blocks (your "paragraphs") */
   :global(.post-content .pt-block) {
     margin: 0 0 calc(var(--lh) / 2);
     white-space: pre-wrap;
-
   }
 
+  /* -------------------------------
+   ✅ IMAGE + CAROUSEL SPACING FIX
+   - text <-> media = 40px
+   - media <-> media = 40px (NOT 80)
+-------------------------------- */
+
+  /* ✅ NEVER give spacing to <img> directly */
+  :global(.post-content img) {
+    width: 100%;
+    border-radius: var(--br);
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block;
+  }
+
+  /* ✅ MAIN image wrapper (figure) */
+  :global(.post-content figure.pt-image) {
+    /* override your inline style margin:"8px auto" */
+    margin: 40px auto !important;
+  }
+
+  /* ✅ Carousel wrapper controls spacing (includes caption) */
+  :global(.post-content .pt-carousel-wrap) {
+    margin: 40px 0;
+  }
+
+  /* carousel box itself should NOT add extra spacing */
+  :global(.post-content .pt-carousel) {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--br);
+    overflow: hidden;
+    cursor: e-resize;
+    margin: 0 !important; /* ✅ spacing comes from wrap */
+  }
+
+  /* ✅ remove double gap when media follows media */
+  :global(.post-content figure.pt-image + figure.pt-image) {
+    margin-top: 0 !important;
+  }
+  :global(.post-content .pt-carousel-wrap + .pt-carousel-wrap) {
+    margin-top: 0 !important;
+  }
+  :global(.post-content figure.pt-image + .pt-carousel-wrap),
+  :global(.post-content .pt-carousel-wrap + figure.pt-image) {
+    margin-top: 0 !important;
+  }
+
+  /* caption under images + carousels */
+  :global(.post-content .pt-caption) {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 6px;
+    font-size: calc(var(--fz) * 0.6);
+  }
+
+  /* -------------------------------
+   ✅ CAROUSEL IMAGES
+-------------------------------- */
+  :global(.post-content .pt-carousel-img) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    border-radius: var(--br);
+    transition: opacity 1s ease-in-out;
+    will-change: opacity;
+  }
+
+  :global(.post-content .pt-carousel-img.is-visible) {
+    opacity: 1;
+  }
+
+  /* horizontal fill */
+  :global(.post-content .pt-carousel-img.fit-cover) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* vertical contain */
+  :global(.post-content .pt-carousel-img.fit-contain) {
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  /* -------------------------------
+   ✅ FOOTNOTES
+-------------------------------- */
   :global(.post-content .footnote-text) {
     color: var(--footnote-gray);
     cursor: pointer;
   }
 
-  /* the hidden source for note HTML */
   :global(.post-content .footnote-note) {
     display: none;
   }
 
-  /* inline PT in note */
   :global(.post-content .fn-inline-block) {
     padding: 0 2px;
   }
 
-  /* === DESKTOP MARGIN NOTE COLUMNS === */
+  /* desktop margin-note columns */
   :global(.post-content .footnote-layer--right),
   :global(.post-content .footnote-layer--left) {
     position: absolute;
     top: 0;
     width: calc((100vw - var(--column-width)) / 2 - 26px);
     pointer-events: none;
-    z-index: 10; /* keeps notes above most content */
+    z-index: 10;
   }
 
   :global(.post-content .footnote-layer--right) {
@@ -149,7 +221,7 @@ const dateText = (() => {
   :global(.post-content .margin-note) {
     position: absolute;
     color: var(--footnote-gray);
-    display: none; /* ✅ no scroll-space when closed */
+    display: none;
     pointer-events: none;
     max-width: 350px;
   }
@@ -165,65 +237,12 @@ const dateText = (() => {
   }
 
   :global(.post-content .margin-note--visible) {
-    display: block; /* ✅ only takes space when open */
-    opacity: 1; /* optional */
+    display: block;
   }
 
-  :global(.post-content .pt-carousel) {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    /* container rounding */
-    border-radius: var(--br);
-    overflow: hidden;
-    cursor: e-resize;
-    margin-top: 40px;
-   margin-bottom: 40px;
-    
-  
-  }
-
-  :global(.post-content .pt-carousel-img) {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-
-    /* IMPORTANT: cancel your global img margins */
-    margin: 0 !important;
-
-    /* radius on the image itself */
-    border-radius: var(--br);
-
-    transition: opacity 1s ease-in-out; /* or whatever you set in JS */
-    will-change: opacity;
-  }
-
-  :global(.post-content .pt-carousel-img.is-visible) {
-    opacity: 1;
-  }
-
-  /* horizontal: fill the box */
-  :global(.post-content .pt-carousel-img.fit-cover) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  /* vertical: shrink-to-fit + center so radius affects the visible image */
-  :global(.post-content .pt-carousel-img.fit-contain) {
-    width: auto;
-    height: 100%;
-    max-width: 100%;
-    object-fit: contain;
-
-    /* center the narrower image */
-    left: 50%;
-    top: 50%;
-    right: auto;
-    bottom: auto;
-    transform: translate(-50%, -50%);
-  }
-
+  /* -------------------------------
+   ✅ LIGHTBOX
+-------------------------------- */
   :global(html.pt-no-scroll),
   :global(body.pt-no-scroll) {
     overflow: hidden;
@@ -248,6 +267,17 @@ const dateText = (() => {
     -webkit-backdrop-filter: blur(8px);
   }
 
+  :global(.pt-lightbox__content) {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    max-width: 90vw;
+    max-height: 90vh;
+  }
+
   :global(.pt-lightbox__img) {
     position: relative;
     z-index: 1;
@@ -260,62 +290,26 @@ const dateText = (() => {
     cursor: zoom-out;
   }
 
-  /* horizontal: prefer width */
   :global(.pt-lightbox__img.is-horizontal) {
     max-width: 90vw;
     max-height: 90vh;
   }
 
-  /* vertical: prefer height (your “90% of height”) */
   :global(.pt-lightbox__img.is-vertical) {
     max-height: 90vh;
     max-width: 90vw;
-  }
-
-  :global(.pt-lightbox__content) {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    max-width: 90vw;
-    max-height: 90vh;
   }
 
   :global(.pt-lightbox__caption) {
     max-width: 90vw;
     text-align: center;
     font-size: calc(var(--fz) * 0.6);
-    // color: var(--footnote-gray);
     display: none;
   }
 
-  :global(.post-content .pt-caption) {
-    display: block;
-    width: 100%;
-    text-align: center;
-    margin-top: 2px;
-    font-size: calc(var(--fz) * 0.6);
-    // color: var(--footnote-gray);
-  }
-
-  :global(.post-content .pt-carousel-btn) {
-    all: unset;
-    position: absolute;
-    z-index: 6;
-    // padding: 8px 10px;
-    line-height: 1;
-    cursor: zoom-in;
-  }
-
-  :global(.post-content .pt-carousel-btn .material-symbols-outlined) {
-    font-size: 30px;
-    line-height: 1;
-    color: var(--gray);
-  }
-
-  /* === MOBILE: INLINE FOOTNOTES AFTER TEXT === */
+  /* -------------------------------
+   ✅ MOBILE
+-------------------------------- */
   @media (max-width: 768px) {
     :global(.post-content .footnote-layer--right),
     :global(.post-content .footnote-layer--left),
@@ -333,7 +327,6 @@ const dateText = (() => {
       margin-left: 5%;
     }
 
-    :global(.post-content .pt-image img),
     :global(.post-content img) {
       cursor: default !important;
     }
