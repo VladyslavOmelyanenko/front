@@ -295,7 +295,7 @@ const items =
 
       {(caption || total > 0) && (
         <div className="pt-caption">
-          {caption ? ` ${caption}` : ""}&emsp;
+          {caption ? ` ${caption} ` : ""}
           {total > 0 ? `${current}/${total}` : ""}
         </div>
       )}

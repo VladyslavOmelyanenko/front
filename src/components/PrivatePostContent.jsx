@@ -44,7 +44,7 @@ export default function PrivatePostClient() {
     })();
   }, []);
 
-  if (!post) return <div className="private-loading">Loading…</div>;
+  if (!post) return <div className="private-loading"></div>;
 
   const year = post.postDate ? new Date(post.postDate).getFullYear() : "";
 
