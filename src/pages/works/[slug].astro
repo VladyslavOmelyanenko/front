@@ -116,9 +116,9 @@ const hasCredit = !!post?.creditbox?.length;
 
 {isPublic ? (
   <Layout title={`Dzastins Zavadzkis—${post.title}`}>
+    <NavForPost slot="overlay" title={post.title} />
     <div class="post-page">
       <Feed>
-        <NavForPost title={post.title} />
         <Post post={post} />
 
       <nav class="post-pagination" aria-label="Work post navigation">
