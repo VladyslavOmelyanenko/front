@@ -11,6 +11,8 @@ const thumbUrls = images
   .map((asset) => urlFor(asset).width(200).auto("format").url());
 
 const initialImages = thumbUrls.slice(0, 3);
+
+
 ---
 
 <a
@@ -49,7 +51,7 @@ const initialImages = thumbUrls.slice(0, 3);
   }
 
   .work-preview {
-    height: 42px;
+    height: 38px;
     display: flex;
     gap: 12px;
 
