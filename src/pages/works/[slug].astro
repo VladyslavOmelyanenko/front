@@ -39,7 +39,6 @@ export async function getStaticPaths() {
   ];
 
   const unique = [...new Set(all)];
-
   return unique.map((slug) => ({ params: { slug } }));
 }
 
@@ -89,6 +88,7 @@ if (isPublic) {
     : { prev: null, next: null };
 
   prev = neighbors?.prev ?? null;
+
   // ✅ WRAP: if no prev (oldest post), send to newest post
   if (!prev) {
     prev = await client.fetch(
@@ -108,7 +108,6 @@ if (isPublic) {
       { type: postType, slug }
     );
   }
-
 }
 
 const hasCredit = !!post?.creditbox?.length;
@@ -117,36 +116,41 @@ const hasCredit = !!post?.creditbox?.length;
 {isPublic ? (
   <Layout title={`Dzastins Zavadzkis—${post.title}`}>
     <NavForPost slot="overlay" title={post.title} />
+
     <div class="post-page">
       <Feed>
         <Post post={post} />
 
-      <nav class="post-pagination" aria-label="Work post navigation">
-        {/* LEFT */}
-        {hasCredit ? (
-          <div class="creditbox" aria-label="Credits">
-            <PortableText value={post.creditbox} />
-          </div>
-        ) : null}
+        <nav class="post-pagination" aria-label="Work post navigation">
+          {/* LEFT */}
+          {hasCredit ? (
+            <div class="creditbox" aria-label="Credits">
+              <PortableText value={post.creditbox} />
+            </div>
+          ) : null}
 
-        {/* RIGHT */}
-        {prev ? (
-          <a class="prev-only" href={`/works/${prev.slug}`} aria-label="Previous project">
-            <span class="label">{prev.title}</span>
-            <span class="arrow">→</span>
-          </a>
-        ) : null}
-      </nav>
-
+          {/* RIGHT */}
+          {prev ? (
+            <a
+              class="prev-only"
+              href={`/works/${prev.slug}`}
+              aria-label="Previous project"
+            >
+              <span class="label">{prev.title}</span>
+              <span class="arrow">→</span>
+            </a>
+          ) : null}
+        </nav>
       </Feed>
     </div>
   </Layout>
 ) : (
   <Layout title="Dzastins Zavadzkis—Hidden Project">
-    <div class="post-page">
-      <Feed>
-        <NavForPost title="Hidden Project" />
+    {/* ✅ keep nav OUTSIDE main-container for blur stability */}
+    <NavForPost slot="overlay" title="Hidden Project" />
 
+    <div class="post-page private-page">
+      <Feed>
         {/* ✅ Locked UI (client decides if unlocked) */}
         <div class="private-wrapper">
           <div class="private-locked" data-private-locked>
@@ -161,6 +165,48 @@ const hasCredit = !!post?.creditbox?.length;
         </div>
       </Feed>
     </div>
+
+    {/* ✅ Disable right click everywhere on hidden posts (strong version) */}
+    <script is:inline>
+      (function () {
+        const kill = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") {
+            e.stopImmediatePropagation();
+          }
+          return false;
+        };
+
+        // Capture-phase listener (hardest to bypass)
+        document.addEventListener("contextmenu", kill, true);
+
+        // Old-school handlers
+        document.oncontextmenu = () => false;
+        window.oncontextmenu = () => false;
+
+        // Optional: block middle-click autoscroll menu on some browsers
+        document.addEventListener(
+          "auxclick",
+          (e) => {
+            if (e.button === 1) kill(e);
+          },
+          true
+        );
+
+        // Optional: block dragging images/links
+        document.addEventListener("dragstart", kill, true);
+
+        // Cleanup on Astro swaps
+        document.addEventListener("astro:before-swap", () => {
+          document.removeEventListener("contextmenu", kill, true);
+          document.removeEventListener("auxclick", kill, true);
+          document.removeEventListener("dragstart", kill, true);
+          document.oncontextmenu = null;
+          window.oncontextmenu = null;
+        });
+      })();
+    </script>
 
     {/* ✅ localStorage unlock check */}
     <script is:inline>
@@ -192,52 +238,50 @@ const hasCredit = !!post?.creditbox?.length;
   }
 
   .post-pagination {
-  margin-top: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
 
-.prev-only {
-  height: 38px;
-  border-radius: var(--br);
-  padding: 0 14px;
-  text-decoration: none;
-  color: #000;
+  .prev-only {
+    height: 38px;
+    border-radius: var(--br);
+    padding: 0 14px;
+    text-decoration: none;
+    color: #000;
 
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 
-  max-width: 48%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    max-width: 48%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
-  box-shadow: var(--box-shadow);
-  backdrop-filter: var(--backdrop-filter);
-  -webkit-backdrop-filter: var(--backdrop-filter);
+    box-shadow: var(--box-shadow);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
 
-  transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
-}
+    transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
+  }
 
-.prev-only:hover {
-  box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
-  backdrop-filter: var(--backdrop-filter-pressed);
-  -webkit-backdrop-filter: var(--backdrop-filter-pressed);
-}
+  .prev-only:hover {
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+    backdrop-filter: var(--backdrop-filter-pressed);
+    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
+  }
 
-.prev-only .label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .prev-only .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.prev-only .arrow {
-  flex: 0 0 auto;
-}
-
-
+  .prev-only .arrow {
+    flex: 0 0 auto;
+  }
 
   .creditbox {
     max-width: 48%;

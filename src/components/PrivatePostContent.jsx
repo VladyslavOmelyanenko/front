@@ -5,6 +5,21 @@ import PostContent from "./PostContent.jsx";
 export default function PrivatePostClient() {
   const [post, setPost] = useState(null);
 
+  // ✅ Disable right-click / context menu anywhere on this page while mounted
+  useEffect(() => {
+    const onContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", onContextMenu, { capture: true });
+
+    return () => {
+      document.removeEventListener("contextmenu", onContextMenu, {
+        capture: true,
+      });
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       // ✅ localStorage unlock gate
@@ -49,7 +64,7 @@ export default function PrivatePostClient() {
   const year = post.postDate ? new Date(post.postDate).getFullYear() : "";
 
   return (
-    <div className="post-container">
+    <div className="post-container private-no-context-menu">
       <div className="title-bar">
         <h2>{post.title}</h2>
         <p>{year}</p>
