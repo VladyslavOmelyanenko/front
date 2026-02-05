@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@astrojs/netlify": "^6.6.3",
+    "@astrojs/sitemap": "^3.7.0",
     "sass": "^1.93.2"
   }
 }

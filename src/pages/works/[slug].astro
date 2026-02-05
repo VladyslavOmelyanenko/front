@@ -46,6 +46,7 @@ const { slug } = Astro.params;
 
 // ✅ Try Sanity first
 const post = await getPostBySlug(slug);
+// const isPublic = !!post && post.isHidden !== true;
 const isPublic = !!post;
 
 // ✅ Pagination + creditbox only for public Sanity posts
@@ -304,7 +305,8 @@ const hasCredit = !!post?.creditbox?.length;
 
   /* ✅ Private lock wrapper */
   .private-wrapper {
-    margin-top: 20px;
+    margin-top: 200px;
+
   }
 
   .private-locked {
