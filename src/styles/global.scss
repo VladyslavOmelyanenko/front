@@ -2,10 +2,11 @@
   --br: 3px;
   --gray: #cecece;
   --highlight-gray: #e6e6e6;
-  --fz: 22px;
+  --fz: 90px;
   --lh: 25px;
   --footnote-gray: #969696;
-  --column-width: 780px;--img-h-s: calc(var(--lh) * 6);
+  --column-width: 780px;
+  --img-h-s: calc(var(--lh) * 6);
   --img-h-m: calc(var(--lh) * 12);
   --img-h-l: calc(var(--lh) * 18);
   --pt: 100px;
@@ -41,7 +42,7 @@ body {
 }
 
 @media (max-width: 1140px) {
-:root {
+  :root {
     --column-width: 580px;
   }
 }
@@ -56,7 +57,7 @@ body {
   :root {
     --fz: 20px;
     --lh: 22px;
-  } 
+  }
 }
 
 ::-moz-selection {
