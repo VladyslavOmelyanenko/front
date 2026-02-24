@@ -164,7 +164,7 @@ const hasCredit = !!post?.creditbox?.length;
 
           {/* ✅ actual private post UI (only show when unlocked) */}
           <div class="private-post" data-private-post>
-            <PrivatePostClient slug={slug} client:load />
+            <PrivatePostClient slug={slug} client:only="react" />
           </div>
         </div>
       </Feed>
