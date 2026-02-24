@@ -31,7 +31,7 @@ const parent = "/" + pathname.split("/")[1];
   const wrapperEl = document.querySelector(".nav-post-wrapper");
 
   if (titleEl && pillEl && closeEl && wrapperEl) {
-    const fullTitle = titleEl.dataset.fullTitle ?? titleEl.textContent ?? "";
+    let fullTitle = titleEl.dataset.fullTitle ?? titleEl.textContent ?? "";
     const ellipsis = "…";
 
     function truncateByWordsToFit() {
@@ -69,6 +69,16 @@ const parent = "/" + pathname.split("/")[1];
       const finalCount = Math.max(1, lo);
       titleEl.textContent = words.slice(0, finalCount).join(" ") + ellipsis;
     }
+
+    window.__setNavPostTitle = (newTitle) => {
+      const clean = String(newTitle ?? "").trim();
+      if (!clean) return;
+
+      fullTitle = clean;
+      titleEl.dataset.fullTitle = clean;
+      titleEl.title = clean;
+      truncateByWordsToFit();
+    };
 
     truncateByWordsToFit();
     window.addEventListener("resize", truncateByWordsToFit, { passive: true });
@@ -117,7 +127,6 @@ const parent = "/" + pathname.split("/")[1];
     overflow: hidden; /* clip the blur layer */
     min-width: 0;
     box-shadow: var(--box-shadow);
-    
   }
 
   /* the blur layer (separate from content/shadows) */
@@ -219,5 +228,4 @@ const parent = "/" + pathname.split("/")[1];
   .nav-post-wrapper > li:hover .close-button {
     box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
   }
-
 </style>

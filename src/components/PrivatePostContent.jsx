@@ -20,22 +20,23 @@ export default function PrivatePostClient({ slug: slugProp }) {
 
       const data = await res.json();
 
-      const normalized = {
-        postType: "work",
-        title: data.title ?? "Hidden Project",
-        postDate: data.postDate ?? data.post_date ?? null,
-        postDescription: data.postDescription ?? data.post_description ?? "",
-        content: Array.isArray(data.content) ? data.content : [],
-        creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
-      };
+    const normalized = {
+      postType: "work",
+      title: data.title ?? "Hidden Project",
+      postDate: data.post_date ?? data.postDate ?? null,
+      postDescription: data.post_description ?? data.postDescription ?? "",
+      content: Array.isArray(data.content) ? data.content : [],
+      creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
+    };
 
-      // ✅ update browser + nav title
-      document.title = `Dzastins Zavadzkis—${normalized.title}`;
-      const navTitleEl = document.querySelector("[data-nav-title]");
-      console.log(navTitleEl, data.title);
-      if (navTitleEl) navTitleEl.textContent = normalized.title;
+    if (
+      typeof window !== "undefined" &&
+      typeof window.__setNavPostTitle === "function"
+    ) {
+      window.__setNavPostTitle(normalized.title);
+    }
 
-      setPost(normalized);
+    setPost(normalized);
     })();
   }, [slugProp]);
 
