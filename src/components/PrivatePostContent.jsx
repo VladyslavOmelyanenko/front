@@ -1,4 +1,4 @@
-// src/components/PrivatePostContent.jsx (or whatever filename you import)
+// src/components/PrivatePostContent.jsx
 import { useEffect, useState } from "react";
 import PostContent from "./PostContent.jsx";
 
@@ -10,17 +10,6 @@ export default function PrivatePostClient({ slug }) {
 
     (async () => {
       try {
-        // ✅ cookie-based check (server truth)
-        const status = await fetch("/.netlify/functions/private-ui-status", {
-          credentials: "include",
-          cache: "no-store",
-        }).then((r) => (r.ok ? r.json() : null));
-
-        if (!status?.unlocked) {
-          window.location.replace("/works?unlock=open");
-          return;
-        }
-
         const res = await fetch(
           `/.netlify/functions/private-post?slug=${encodeURIComponent(slug)}`,
           {
@@ -28,6 +17,18 @@ export default function PrivatePostClient({ slug }) {
             cache: "no-store",
           },
         );
+
+        // ✅ Not unlocked
+        if (res.status === 401) {
+          window.location.replace("/works?unlock=open");
+          return;
+        }
+
+        // ✅ Wrong/unknown slug
+        if (res.status === 404) {
+          window.location.replace("/works");
+          return;
+        }
 
         if (!res.ok) {
           window.location.replace("/works?unlock=open");
@@ -39,8 +40,8 @@ export default function PrivatePostClient({ slug }) {
         const normalized = {
           postType: "work",
           title: data.title ?? "Hidden Project",
-          postDate: data.post_date ?? data.postDate ?? null,
-          postDescription: data.post_description ?? data.postDescription ?? "",
+          postDate: data.postDate ?? data.post_date ?? null,
+          postDescription: data.postDescription ?? data.post_description ?? "",
           content: Array.isArray(data.content) ? data.content : [],
           creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
         };

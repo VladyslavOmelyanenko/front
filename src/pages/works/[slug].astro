@@ -227,27 +227,31 @@ const hasCredit = !!post?.creditbox?.length;
     }
 
     async function run() {
+      // default state: show locked UI (prevents “empty page”)
+      setVisible(false);
+
       try {
-        const r = await fetch("/.netlify/functions/private-ui-status", {
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (!r.ok) throw new Error("status not ok");
+        const slug = new URL(location.href).pathname.split("/").pop();
 
-        const data = await r.json();
+        const r = await fetch(
+          "/.netlify/functions/private-post?slug=" + encodeURIComponent(slug),
+          { credentials: "include", cache: "no-store" }
+        );
 
-        if (!data?.unlocked) {
+        if (r.status === 401) {
           window.location.replace(REDIRECT);
           return;
         }
 
+        if (!r.ok) throw new Error("private-post not ok");
+
+        // if we got here: cookie is valid AND post exists
         setVisible(true);
       } catch {
         window.location.replace(REDIRECT);
       }
     }
 
-    // ✅ run on first load + every Astro navigation
     document.addEventListener("astro:page-load", run);
     run();
   })();
