@@ -3,83 +3,39 @@ import { useEffect, useState } from "react";
 import PostContent from "./PostContent.jsx";
 
 export default function PrivatePostClient({ slug: slugProp }) {
-  const [post, setPost] = useState(null);
-
-  // ✅ Disable right-click / context menu anywhere on this page while mounted
+  // ...
   useEffect(() => {
-    const onContextMenu = (e) => e.preventDefault();
-    document.addEventListener("contextmenu", onContextMenu, { capture: true });
-    return () => {
-      document.removeEventListener("contextmenu", onContextMenu, {
-        capture: true,
-      });
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-
     (async () => {
-      try {
-        // Use prop if passed, fallback to URL
-        const slug =
-          slugProp ||
-          window.location.pathname.split("/").filter(Boolean).pop() ||
-          "";
+      const slug = slugProp || window.location.pathname.split("/").pop();
 
-        if (!slug) {
-          window.location.replace("/works");
-          return;
-        }
+      const res = await fetch(`/.netlify/functions/private-post?slug=${slug}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
 
-        // ✅ COOKIE gate (authoritative)
-        const statusRes = await fetch("/.netlify/functions/private-ui-status", {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        const status = await statusRes.json().catch(() => null);
-        if (!status?.unlocked) {
-          window.location.replace("/works?unlock=open");
-          return;
-        }
-
-        // ✅ Fetch hidden post (cookie required by function)
-        const res = await fetch(
-          `/.netlify/functions/private-post?slug=${encodeURIComponent(slug)}`,
-          { credentials: "include", cache: "no-store" },
-        );
-
-        if (res.status === 401) {
-          window.location.replace("/works?unlock=open");
-          return;
-        }
-        if (!res.ok) {
-          window.location.replace("/works");
-          return;
-        }
-
-        const data = await res.json();
-
-        // ✅ Normalize (supports both Sanity + Supabase return shapes)
-        const normalized = {
-          postType: "work",
-          title: data.title ?? "Hidden Project",
-          postDate: data.postDate ?? data.post_date ?? null,
-          postDescription: data.postDescription ?? data.post_description ?? "",
-          content: Array.isArray(data.content) ? data.content : [],
-          creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
-        };
-
-        if (alive) setPost(normalized);
-      } catch {
-        window.location.replace("/works?unlock=open");
+      if (!res.ok) {
+        window.location.href = "/works?unlock=open";
+        return;
       }
-    })();
 
-    return () => {
-      alive = false;
-    };
+      const data = await res.json();
+
+      const normalized = {
+        postType: "work",
+        title: data.title ?? "Hidden Project",
+        postDate: data.postDate ?? data.post_date ?? null,
+        postDescription: data.postDescription ?? data.post_description ?? "",
+        content: Array.isArray(data.content) ? data.content : [],
+        creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
+      };
+
+      // ✅ update browser + nav title
+      document.title = `Dzastins Zavadzkis—${normalized.title}`;
+      const navTitleEl = document.querySelector("[data-nav-title]");
+      if (navTitleEl) navTitleEl.textContent = normalized.title;
+
+      setPost(normalized);
+    })();
   }, [slugProp]);
 
   if (!post) return <div className="private-loading"></div>;
