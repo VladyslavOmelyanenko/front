@@ -32,6 +32,7 @@ export default function PrivatePostClient({ slug: slugProp }) {
       // ✅ update browser + nav title
       document.title = `Dzastins Zavadzkis—${normalized.title}`;
       const navTitleEl = document.querySelector("[data-nav-title]");
+      console.log(navTitleEl, data.title);
       if (navTitleEl) navTitleEl.textContent = normalized.title;
 
       setPost(normalized);
