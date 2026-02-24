@@ -214,23 +214,42 @@ const hasCredit = !!post?.creditbox?.length;
 
     {/* ✅ localStorage unlock check */}
 <script is:inline>
-  (function () {
-    fetch("/.netlify/functions/private-ui-status", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
+  (() => {
+    const REDIRECT = "/works?unlock=open";
+
+    function setVisible(unlocked) {
+      const lockedEl = document.querySelector("[data-private-locked]");
+      const postEl = document.querySelector("[data-private-post]");
+      if (!lockedEl || !postEl) return;
+
+      lockedEl.style.display = unlocked ? "none" : "block";
+      postEl.style.display = unlocked ? "block" : "none";
+    }
+
+    async function run() {
+      try {
+        const r = await fetch("/.netlify/functions/private-ui-status", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!r.ok) throw new Error("status not ok");
+
+        const data = await r.json();
+
         if (!data?.unlocked) {
-          window.location.replace("/works?unlock=open");
+          window.location.replace(REDIRECT);
           return;
         }
 
-        const lockedEl = document.querySelector("[data-private-locked]");
-        const postEl = document.querySelector("[data-private-post]");
-        if (!lockedEl || !postEl) return;
+        setVisible(true);
+      } catch {
+        window.location.replace(REDIRECT);
+      }
+    }
 
-        lockedEl.style.display = "none";
-        postEl.style.display = "block";
-      })
-      .catch(() => window.location.replace("/works?unlock=open"));
+    // ✅ run on first load + every Astro navigation
+    document.addEventListener("astro:page-load", run);
+    run();
   })();
 </script>
   </Layout>
@@ -322,9 +341,8 @@ const hasCredit = !!post?.creditbox?.length;
 }
 
 .private-locked {
-  display: none;
+  display: block;
   text-align: center;
-  font-size: calc(var(--fz) * 0.75);
   opacity: 0.8;
 }
 
