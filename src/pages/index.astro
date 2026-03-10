@@ -24,36 +24,41 @@ const images = (data?.featuredImages ?? []).filter((img) => img?.asset);
 //build low-res placeholder URLs
 //------
 const lowResUrls = images.map((img) =>
-  urlFor(img.asset).width(64).quality(20).url()
+  urlFor(img.asset).width(64).quality(20).url(),
 );
 
 //------
 //build hi-res URLs with reduced quality for bandwidth savings
 //------
 const hiResUrls = images.map((img) =>
-  urlFor(img.asset).width(1920).quality(75).url()
+  urlFor(img.asset).width(1920).quality(75).url(),
 );
 ---
 
-<Layout title="Home">
+<Layout
+  title="Dzastins Zavadzkis"
+  description="Website of Dzastins Zavadzkis"
+  >
   <div class="image-scroll" id="imageScroll">
-    {images.map((img, index) => {
-      const intrinsicWidth = img.asset?.metadata?.dimensions?.width ?? 1;
-      const intrinsicHeight = img.asset?.metadata?.dimensions?.height ?? 1;
+    {
+      images.map((img, index) => {
+        const intrinsicWidth = img.asset?.metadata?.dimensions?.width ?? 1;
+        const intrinsicHeight = img.asset?.metadata?.dimensions?.height ?? 1;
 
-      return (
-        <img
-          class="scroll-image is-loading"
-          src={lowResUrls[index]}
-          data-hi={hiResUrls[index]}
-          alt={img.alt ?? "Image"}
-          width={intrinsicWidth}
-          height={intrinsicHeight}
-          loading="lazy"
-          decoding="async"
-        />
-      );
-    })}
+        return (
+          <img
+            class="scroll-image is-loading"
+            src={lowResUrls[index]}
+            data-hi={hiResUrls[index]}
+            alt={img.alt ?? "Image"}
+            width={intrinsicWidth}
+            height={intrinsicHeight}
+            loading="lazy"
+            decoding="async"
+          />
+        );
+      })
+    }
   </div>
 </Layout>
 
@@ -71,7 +76,8 @@ const hiResUrls = images.map((img) =>
       let parentElement = containerElement.parentElement;
       while (parentElement) {
         const overflowYValue = getComputedStyle(parentElement).overflowY;
-        const isScrollableStyle = overflowYValue === "auto" || overflowYValue === "scroll";
+        const isScrollableStyle =
+          overflowYValue === "auto" || overflowYValue === "scroll";
         if (isScrollableStyle) return parentElement;
         parentElement = parentElement.parentElement;
       }
@@ -89,7 +95,9 @@ const hiResUrls = images.map((img) =>
       if (imageContainer.dataset.progressiveImagesInited === "1") return;
       imageContainer.dataset.progressiveImagesInited = "1";
 
-      const imageElements = Array.from(imageContainer.querySelectorAll("img.scroll-image"));
+      const imageElements = Array.from(
+        imageContainer.querySelectorAll("img.scroll-image"),
+      );
       if (!imageElements.length) return;
 
       const observerRoot = getObserverRoot(imageContainer);
@@ -106,7 +114,8 @@ const hiResUrls = images.map((img) =>
         const loadPromise = new Promise((resolve, reject) => {
           const preloadImage = new Image();
           preloadImage.onload = () => resolve(undefined);
-          preloadImage.onerror = () => reject(new Error("hi-res preload failed"));
+          preloadImage.onerror = () =>
+            reject(new Error("hi-res preload failed"));
           preloadImage.src = hiResUrl;
         });
 
@@ -153,20 +162,22 @@ const hiResUrls = images.map((img) =>
         {
           root: observerRoot,
           rootMargin: "400px 0px",
-          threshold: 0
-        }
+          threshold: 0,
+        },
       );
 
       //------
       //register images with the observer
       //------
       function observeImages() {
-        imageContainer.querySelectorAll("img.scroll-image").forEach((imageElement) => {
-          if (!(imageElement instanceof HTMLImageElement)) return;
-          if (!imageElement.getAttribute("data-hi")) return;
-          if (imageElement.dataset.upgraded === "1") return;
-          hiResObserver.observe(imageElement);
-        });
+        imageContainer
+          .querySelectorAll("img.scroll-image")
+          .forEach((imageElement) => {
+            if (!(imageElement instanceof HTMLImageElement)) return;
+            if (!imageElement.getAttribute("data-hi")) return;
+            if (imageElement.dataset.upgraded === "1") return;
+            hiResObserver.observe(imageElement);
+          });
       }
 
       observeImages();
