@@ -133,7 +133,7 @@ const hasCredit = !!post?.creditbox?.length;
           {/* ✅ show locked UI immediately */}
           <div class="private-locked" data-private-locked>
             <p>
-              <span data-private-loading>Loading…</span>
+              <span data-private-loading class="loading-text">Loading…</span>
               <span data-private-locked-text hidden>This project is locked.</span>
             </p>
             <a class="page-btn" href="/works?unlock=open">Go to Works → Unlock</a>
@@ -279,5 +279,9 @@ const hasCredit = !!post?.creditbox?.length;
   /* ✅ allow React to render immediately; it will redirect if locked */
   .private-post {
     display: block;
+  }
+
+  .loading-text {
+    padding-top: 200pxs
   }
 </style>
