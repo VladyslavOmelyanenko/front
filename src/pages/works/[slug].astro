@@ -7,13 +7,12 @@ import Post from "../../components/Post.astro";
 import { client } from "../../lib/sanity.js";
 import { getWorkPost as getPostBySlug } from "../../data/works";
 
-import { createClient } from "@supabase/supabase-js";
 import PrivatePostClient from "../../components/PrivatePostContent.jsx";
 import { PortableText } from "@portabletext/react";
 
 export async function getStaticPaths() {
-  // ✅ Sanity public works
-  const publicSlugs = await client.fetch(`
+  // ✅ Sanity-only slugs (you said you are only using Sanity right now)
+  const slugs = await client.fetch(`
     *[_type == "post"
       && postType == "work"
       && defined(slug.current)
@@ -23,35 +22,18 @@ export async function getStaticPaths() {
     }
   `);
 
-  // ✅ Supabase hidden works
-  const supabase = createClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
-  const { data: hiddenSlugs } = await supabase
-    .from("private_posts_preview")
-    .select("slug");
-
-  const all = [
-    ...(publicSlugs || []).map((x) => x.slug),
-    ...(hiddenSlugs || []).map((x) => x.slug),
-  ];
-
-  const unique = [...new Set(all)];
-  return unique.map((slug) => ({ params: { slug } }));
+  return (slugs || []).map(({ slug }) => ({ params: { slug } }));
 }
 
 const { slug } = Astro.params;
 
-// ✅ Try Sanity first
+// ✅ Try Sanity
 const post = await getPostBySlug(slug);
 const isHidden = !!post?.isHidden;
 const isPublic = !!post && !isHidden;
 
 // ✅ Pagination + creditbox only for public Sanity posts
 let prev = null;
-let next = null;
 
 if (isPublic) {
   const baseDate = post.postDate;
@@ -71,24 +53,12 @@ if (isPublic) {
             | order(postDate desc)[0]{
               title,
               "slug": slug.current
-            },
-
-          "next": *[_type=="post"
-            && postType == $type
-            && defined(slug.current)
-            && defined(postDate)
-            && !(_id in path("drafts.**"))
-            && isHidden != true
-            && postDate > $d]
-            | order(postDate asc)[0]{
-              title,
-              "slug": slug.current
             }
         }
         `,
         { type: postType, d: baseDate }
       )
-    : { prev: null, next: null };
+    : { prev: null };
 
   prev = neighbors?.prev ?? null;
 
@@ -118,9 +88,10 @@ const hasCredit = !!post?.creditbox?.length;
 ---
 
 {isPublic ? (
-  <Layout 
+  <Layout
     title={`Dzastins Zavadzkis—${post.title}`}
-    description={`Project of Dzastins Zavadzkis, ${post.title}`}>
+    description={`Project of Dzastins Zavadzkis, ${post.title}`}
+  >
     <NavForPost slot="overlay" title={post.title} />
 
     <div class="post-page">
@@ -138,7 +109,11 @@ const hasCredit = !!post?.creditbox?.length;
 
           <div class="post-pagination__right">
             {prev ? (
-              <a class="prev-only" href={`/works/${prev.slug}`} aria-label="Previous project">
+              <a
+                class="prev-only"
+                href={`/works/${prev.slug}`}
+                aria-label="Previous project"
+              >
                 <span class="label">{prev.title}</span>
                 <span class="arrow">→</span>
               </a>
@@ -150,19 +125,21 @@ const hasCredit = !!post?.creditbox?.length;
   </Layout>
 ) : (
   <Layout title="Dzastins Zavadzkis—Hidden Project">
-    {/* ✅ keep nav OUTSIDE main-container for blur stability */}
     <NavForPost slot="overlay" title="Hidden Project" />
 
     <div class="post-page private-page">
       <Feed>
-        {/* ✅ Locked UI (client decides if unlocked) */}
         <div class="private-wrapper">
+          {/* ✅ show locked UI immediately */}
           <div class="private-locked" data-private-locked>
-            <p>This project is locked.</p>
-            <a class="page-btn" href="/works">Go to Works → Unlock</a>
+            <p>
+              <span data-private-loading>Loading…</span>
+              <span data-private-locked-text hidden>This project is locked.</span>
+            </p>
+            <a class="page-btn" href="/works?unlock=open">Go to Works → Unlock</a>
           </div>
 
-          {/* ✅ actual private post UI (only show when unlocked) */}
+          {/* ✅ React will fetch + hide the locked UI when unlocked */}
           <div class="private-post" data-private-post>
             <PrivatePostClient slug={slug} client:only="react" />
           </div>
@@ -182,14 +159,10 @@ const hasCredit = !!post?.creditbox?.length;
           return false;
         };
 
-        // Capture-phase listener (hardest to bypass)
         document.addEventListener("contextmenu", kill, true);
-
-        // Old-school handlers
         document.oncontextmenu = () => false;
         window.oncontextmenu = () => false;
 
-        // Optional: block middle-click autoscroll menu on some browsers
         document.addEventListener(
           "auxclick",
           (e) => {
@@ -198,10 +171,8 @@ const hasCredit = !!post?.creditbox?.length;
           true
         );
 
-        // Optional: block dragging images/links
         document.addEventListener("dragstart", kill, true);
 
-        // Cleanup on Astro swaps
         document.addEventListener("astro:before-swap", () => {
           document.removeEventListener("contextmenu", kill, true);
           document.removeEventListener("auxclick", kill, true);
@@ -211,100 +182,102 @@ const hasCredit = !!post?.creditbox?.length;
         });
       })();
     </script>
-
   </Layout>
 )}
 
 <style lang="scss">
   .post-page {
-  padding-bottom: 40px;
-}
+    padding-bottom: 40px;
+  }
 
-.post-pagination {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: 1fr auto; /* left fills, right hugs */
-  align-items: flex-start;
-  column-gap: 10px;
-}
+  .post-pagination {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: 1fr auto; /* left fills, right hugs */
+    align-items: flex-start;
+    column-gap: 10px;
+  }
 
-.post-pagination__left {
-  min-width: 0; /* allow left column to wrap */
-}
+  .post-pagination__left {
+    min-width: 0; /* allow left column to wrap */
+  }
 
-.post-pagination__right {
-  justify-self: end;      /* ✅ always right */
-  min-width: max-content; /* ✅ prevents 1-letter shrink */
-}
+  .post-pagination__right {
+    justify-self: end;
+    min-width: max-content;
+  }
 
-.prev-only {
-  height: 38px;
-  border-radius: var(--br);
-  padding: 0 14px;
-  text-decoration: none;
-  color: #000;
+  .prev-only {
+    height: 38px;
+    border-radius: var(--br);
+    padding: 0 14px;
+    text-decoration: none;
+    color: #000;
 
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 
-  width: max-content;
-  max-width: clamp(220px, 42vw, 520px); /* ✅ stable truncation */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    width: max-content;
+    max-width: clamp(220px, 42vw, 520px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
-  box-shadow: var(--box-shadow);
-  backdrop-filter: var(--backdrop-filter);
-  -webkit-backdrop-filter: var(--backdrop-filter);
+    box-shadow: var(--box-shadow);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
 
-  transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
-}
+    transition: box-shadow 0.15s ease, backdrop-filter 0.15s ease;
+  }
 
-.prev-only:hover {
-  box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
-  backdrop-filter: var(--backdrop-filter-pressed);
-  -webkit-backdrop-filter: var(--backdrop-filter-pressed);
-}
+  .prev-only:hover {
+    box-shadow: 0 0 3px rgba(122, 122, 122, 0.4) inset;
+    backdrop-filter: var(--backdrop-filter-pressed);
+    -webkit-backdrop-filter: var(--backdrop-filter-pressed);
+  }
 
-.prev-only .label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .prev-only .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.prev-only .arrow {
-  flex: 0 0 auto;
-}
+  .prev-only .arrow {
+    flex: 0 0 auto;
+  }
 
-.creditbox {
-  max-width: 48%;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  font-size: calc(var(--fz) * 0.6);
-  line-height: calc(var(--lh) * 0.65);
-  text-align: left;
-}
+  .creditbox {
+    max-width: 48%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: calc(var(--fz) * 0.6);
+    line-height: calc(var(--lh) * 0.65);
+    text-align: left;
+  }
 
-.creditbox :global(p) {
-  margin: 0;
-}
+  .creditbox :global(p) {
+    margin: 0;
+  }
 
-.creditbox :global(a) {
-  text-decoration: underline;
-  color: var(--gray);
-}
+  .creditbox :global(a) {
+    text-decoration: underline;
+    color: var(--gray);
+  }
 
-/* ✅ Private lock wrapper */
+  .private-wrapper {
+    // margin-top: 200px;
+  }
 
-.private-locked {
-  display: block;
-  text-align: center;
-  opacity: 0.8;
-}
+  /* ✅ visible immediately (no blank page) */
+  .private-locked {
+    display: block;
+    text-align: center;
+    opacity: 0.8;
+  }
 
-.private-post {
-  display: block;
-}
- 
+  /* ✅ allow React to render immediately; it will redirect if locked */
+  .private-post {
+    display: block;
+  }
 </style>

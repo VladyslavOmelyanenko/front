@@ -8,8 +8,30 @@ export default function PrivatePostClient({ slug }) {
   useEffect(() => {
     let alive = true;
 
+    const lockedBox = document.querySelector("[data-private-locked]");
+    const loadingEl = document.querySelector("[data-private-loading]");
+    const lockedTextEl = document.querySelector("[data-private-locked-text]");
+
+    const showLoading = () => {
+      if (loadingEl) loadingEl.hidden = false;
+      if (lockedTextEl) lockedTextEl.hidden = true;
+      if (lockedBox) lockedBox.style.display = "block";
+    };
+
+    const showLocked = () => {
+      if (loadingEl) loadingEl.hidden = true;
+      if (lockedTextEl) lockedTextEl.hidden = false;
+      if (lockedBox) lockedBox.style.display = "block";
+    };
+
+    const hideLockedBox = () => {
+      if (lockedBox) lockedBox.style.display = "none";
+    };
+
     (async () => {
       try {
+        showLoading();
+
         const effectiveSlug =
           (slug && String(slug).trim()) ||
           window.location.pathname.split("/").filter(Boolean).pop() ||
@@ -25,20 +47,19 @@ export default function PrivatePostClient({ slug }) {
           { credentials: "include", cache: "no-store" },
         );
 
-        // Not unlocked
         if (res.status === 401) {
-          window.location.replace("/works?unlock=open");
-          return;
+          showLocked();
+          return; // user can click unlock link
         }
 
-        // Bad slug / not found
-        if (res.status === 400 || res.status === 404) {
+        if (res.status === 404 || res.status === 400) {
           window.location.replace("/works");
           return;
         }
 
         if (!res.ok) {
-          window.location.replace("/works?unlock=open");
+          // treat as locked-ish
+          showLocked();
           return;
         }
 
@@ -53,18 +74,14 @@ export default function PrivatePostClient({ slug }) {
           creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
         };
 
-        // hide locked UI once we have content
-        const lockedEl = document.querySelector("[data-private-locked]");
-        if (lockedEl) lockedEl.style.display = "none";
-
-        // update nav title if you've added the hook
         if (typeof window.__setNavPostTitle === "function") {
           window.__setNavPostTitle(normalized.title);
         }
 
+        hideLockedBox();
         if (alive) setPost(normalized);
       } catch {
-        window.location.replace("/works?unlock=open");
+        showLocked();
       }
     })();
 
@@ -73,7 +90,7 @@ export default function PrivatePostClient({ slug }) {
     };
   }, [slug]);
 
-  if (!post) return null; // locked UI is already visible
+  if (!post) return null; // loading/locked UI handled by the Astro block
 
   const year = post.postDate ? new Date(post.postDate).getFullYear() : "";
 
