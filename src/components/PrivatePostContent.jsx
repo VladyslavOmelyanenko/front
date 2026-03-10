@@ -10,22 +10,29 @@ export default function PrivatePostClient({ slug }) {
 
     (async () => {
       try {
+        const effectiveSlug =
+          (slug && String(slug).trim()) ||
+          window.location.pathname.split("/").filter(Boolean).pop() ||
+          "";
+
+        if (!effectiveSlug) {
+          window.location.replace("/works");
+          return;
+        }
+
         const res = await fetch(
-          `/.netlify/functions/private-post?slug=${encodeURIComponent(slug)}`,
-          {
-            credentials: "include",
-            cache: "no-store",
-          },
+          `/.netlify/functions/private-post?slug=${encodeURIComponent(effectiveSlug)}`,
+          { credentials: "include", cache: "no-store" },
         );
 
-        // ✅ Not unlocked
+        // Not unlocked
         if (res.status === 401) {
           window.location.replace("/works?unlock=open");
           return;
         }
 
-        // ✅ Wrong/unknown slug
-        if (res.status === 404) {
+        // Bad slug / not found
+        if (res.status === 400 || res.status === 404) {
           window.location.replace("/works");
           return;
         }
@@ -46,11 +53,12 @@ export default function PrivatePostClient({ slug }) {
           creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
         };
 
-        // ✅ update Nav pill title if available
-        if (
-          typeof window !== "undefined" &&
-          typeof window.__setNavPostTitle === "function"
-        ) {
+        // hide locked UI once we have content
+        const lockedEl = document.querySelector("[data-private-locked]");
+        if (lockedEl) lockedEl.style.display = "none";
+
+        // update nav title if you've added the hook
+        if (typeof window.__setNavPostTitle === "function") {
           window.__setNavPostTitle(normalized.title);
         }
 
@@ -65,7 +73,7 @@ export default function PrivatePostClient({ slug }) {
     };
   }, [slug]);
 
-  if (!post) return <div className="private-loading" />;
+  if (!post) return null; // locked UI is already visible
 
   const year = post.postDate ? new Date(post.postDate).getFullYear() : "";
 

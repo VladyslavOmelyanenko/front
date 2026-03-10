@@ -212,50 +212,6 @@ const hasCredit = !!post?.creditbox?.length;
       })();
     </script>
 
-    {/* ✅ localStorage unlock check */}
-<script is:inline>
-  (() => {
-    const REDIRECT = "/works?unlock=open";
-
-    function setVisible(unlocked) {
-      const lockedEl = document.querySelector("[data-private-locked]");
-      const postEl = document.querySelector("[data-private-post]");
-      if (!lockedEl || !postEl) return;
-
-      lockedEl.style.display = unlocked ? "none" : "block";
-      postEl.style.display = unlocked ? "block" : "none";
-    }
-
-    async function run() {
-      // default state: show locked UI (prevents “empty page”)
-      setVisible(false);
-
-      try {
-        const slug = new URL(location.href).pathname.split("/").pop();
-
-        const r = await fetch(
-          "/.netlify/functions/private-post?slug=" + encodeURIComponent(slug),
-          { credentials: "include", cache: "no-store" }
-        );
-
-        if (r.status === 401) {
-          window.location.replace(REDIRECT);
-          return;
-        }
-
-        if (!r.ok) throw new Error("private-post not ok");
-
-        // if we got here: cookie is valid AND post exists
-        setVisible(true);
-      } catch {
-        window.location.replace(REDIRECT);
-      }
-    }
-
-    document.addEventListener("astro:page-load", run);
-    run();
-  })();
-</script>
   </Layout>
 )}
 

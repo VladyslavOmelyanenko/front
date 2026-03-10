@@ -1,13 +1,5 @@
 // /public/scripts/works-unlock.js
-// ✅ Works unlock overlay controller (ViewTransitions-safe)
-// ✅ No duplicate listeners
-// ✅ Locked projects do NOTHING when locked
-// ✅ Unlock form submits via AJAX (wrong password stays open)
-
 (() => {
-  const STORAGE_KEY = "private_ui_until";
-  const TEN_MIN = 10 * 60 * 1000;
-
   const elTarget = (e) =>
     e?.target instanceof Element ? e.target : e?.target?.parentElement;
 
@@ -33,26 +25,24 @@
     overlay.classList.remove("is-open");
     overlay.setAttribute("aria-hidden", "true");
 
-    // hide error when closing
     const err = overlay.querySelector("[data-unlock-error]");
     if (err) err.hidden = true;
   }
 
-  function setUnlockedFor10Min() {
-    localStorage.setItem(STORAGE_KEY, String(Date.now() + TEN_MIN));
-  }
-
-  function isUnlockedNow() {
-    const until = Number(localStorage.getItem(STORAGE_KEY) || 0);
-    if (!until) return false;
-
-    const ok = Date.now() < until;
-    if (!ok) localStorage.removeItem(STORAGE_KEY);
-    return ok;
-  }
-
-  function syncUnlockedUI() {
-    document.documentElement.classList.toggle("works-unlocked", isUnlockedNow());
+  async function syncUnlockedUIFromCookie() {
+    try {
+      const r = await fetch("/.netlify/functions/private-ui-status", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await r.json().catch(() => null);
+      const unlocked = !!data?.unlocked;
+      document.documentElement.classList.toggle("works-unlocked", unlocked);
+      return unlocked;
+    } catch {
+      document.documentElement.classList.remove("works-unlocked");
+      return false;
+    }
   }
 
   function handleUnlockRedirectParams() {
@@ -64,17 +54,20 @@
       window.history.replaceState({}, "", url.pathname + url.search);
     }
 
-    if (url.searchParams.get("unlock") === "ok") {
-      setUnlockedFor10Min();
-      syncUnlockedUI(); // ✅ IMPORTANT: reflect unlock immediately
+    if (url.searchParams.get("unlock") === "fail") {
+      openOverlay();
+      const overlay = getOverlay();
+      const err = overlay?.querySelector("[data-unlock-error]");
+      if (err) err.hidden = false;
       url.searchParams.delete("unlock");
       window.history.replaceState({}, "", url.pathname + url.search);
     }
 
-    if (url.searchParams.get("unlock") === "fail") {
-      openOverlay();
+    if (url.searchParams.get("unlock") === "ok") {
+      // cookie is set; just sync UI from cookie
       url.searchParams.delete("unlock");
       window.history.replaceState({}, "", url.pathname + url.search);
+      syncUnlockedUIFromCookie();
     }
   }
 
@@ -120,9 +113,8 @@
           return;
         }
 
-        // ✅ success: unlock
-        setUnlockedFor10Min();
-        syncUnlockedUI();
+        // ✅ cookie was set by server, now sync UI from cookie
+        await syncUnlockedUIFromCookie();
 
         if (input) input.value = "";
         closeOverlay();
@@ -141,22 +133,15 @@
   function initOnEveryNavigation() {
     closeOverlay();
     handleUnlockRedirectParams();
-    syncUnlockedUI();
     bindUnlockFormOnce();
+    syncUnlockedUIFromCookie();
   }
 
-  // ✅ ONE global delegated click handler
   function onClick(e) {
     const t = elTarget(e);
     if (!t) return;
 
-    // footer unlock button
-    if (t.closest?.("[data-open-unlock]")) {
-      openOverlay();
-      return;
-    }
-
-    // 🔒 locked item click → do nothing (no overlay, no navigation)
+    // locked link click -> if not unlocked, prevent + open overlay
     const lockedLink = t.closest?.("a[data-locked='true']");
     if (
       lockedLink &&
@@ -164,10 +149,10 @@
     ) {
       e.preventDefault();
       e.stopPropagation();
+      openOverlay();
       return;
     }
 
-    // backdrop closes
     if (t.closest?.("[data-unlock-backdrop]")) {
       closeOverlay();
       return;
@@ -178,14 +163,12 @@
     if (e.key === "Escape") closeOverlay();
   }
 
-  // ✅ bind listeners once
   if (!window.__worksUnlockBound) {
     document.addEventListener("click", onClick);
     window.addEventListener("keydown", onKeydown);
     window.__worksUnlockBound = true;
   }
 
-  // ✅ initial + after ViewTransitions
   document.addEventListener("astro:page-load", initOnEveryNavigation);
   initOnEveryNavigation();
 })();
