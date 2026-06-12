@@ -46,6 +46,7 @@ function SanityImage({ value }) {
 
   if (!src) return null;
 
+  const dims = img?.metadata?.dimensions;
   const widthPct = size === "s" ? "33.333%" : size === "m" ? "66.666%" : "100%";
 
   return (
@@ -56,6 +57,8 @@ function SanityImage({ value }) {
       <img
         src={src}
         alt={alt}
+        width={dims?.width}
+        height={dims?.height}
         loading="lazy"
         decoding="async"
         data-caption={caption ?? ""}
@@ -77,7 +80,29 @@ function SanityImage({ value }) {
 -------------------------------- */
 const LinkMark = ({ children, value }) => {
   const href = value?.href;
+  const [copied, setCopied] = useState(false);
   if (!href) return <>{children}</>;
+
+  const isEmail = href.startsWith("mailto:");
+  if (isEmail) {
+    const email = href.slice(7);
+    const handleCopy = (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(email).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1000);
+      });
+    };
+    return (
+      <span
+        onClick={handleCopy}
+        style={{ cursor: "copy" }}
+        title="Click to copy email"
+      >
+        {copied ? "Copied." : children}
+      </span>
+    );
+  }
 
   const isExternal = href.startsWith("http");
   return (
