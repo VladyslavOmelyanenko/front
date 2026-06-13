@@ -88,10 +88,9 @@ const hasCredit = !!post?.creditbox?.length;
 ---
 
 {isPublic ? (
-  <Layout
-    title={`Dzastins Zavadzkis—${post.title}`}
-    description={`Project of Dzastins Zavadzkis, ${post.title}`}
-  >
+  <Layout 
+    title={`Dzastins Zavadskis—${post.title}`}
+    description={`Project of Dzastins Zavadskis, ${post.title}`}>
     <NavForPost slot="overlay" title={post.title} />
 
     <div class="post-page">
@@ -124,7 +123,8 @@ const hasCredit = !!post?.creditbox?.length;
     </div>
   </Layout>
 ) : (
-  <Layout title="Dzastins Zavadzkis—Hidden Project">
+  <Layout title="Dzastins Zavadskis—Hidden Project">
+    {/* ✅ keep nav OUTSIDE main-container for blur stability */}
     <NavForPost slot="overlay" title="Hidden Project" />
 
     <div class="post-page private-page">
