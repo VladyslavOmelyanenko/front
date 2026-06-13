@@ -2,66 +2,69 @@
 import { useEffect, useState } from "react";
 import PostContent from "./PostContent.jsx";
 
-export default function PrivatePostClient({ slug: slugProp }) {
+export default function PrivatePostClient({ slug }) {
   const [post, setPost] = useState(null);
-
-  // ✅ Disable right-click / context menu anywhere on this page while mounted
-  useEffect(() => {
-    const onContextMenu = (e) => e.preventDefault();
-    document.addEventListener("contextmenu", onContextMenu, { capture: true });
-    return () => {
-      document.removeEventListener("contextmenu", onContextMenu, {
-        capture: true,
-      });
-    };
-  }, []);
 
   useEffect(() => {
     let alive = true;
 
+    const lockedBox = document.querySelector("[data-private-locked]");
+    const loadingEl = document.querySelector("[data-private-loading]");
+    const lockedTextEl = document.querySelector("[data-private-locked-text]");
+
+    const showLoading = () => {
+      if (loadingEl) loadingEl.hidden = false;
+      if (lockedTextEl) lockedTextEl.hidden = true;
+      if (lockedBox) lockedBox.style.display = "block";
+    };
+
+    const showLocked = () => {
+      if (loadingEl) loadingEl.hidden = true;
+      if (lockedTextEl) lockedTextEl.hidden = false;
+      if (lockedBox) lockedBox.style.display = "block";
+    };
+
+    const hideLockedBox = () => {
+      if (lockedBox) lockedBox.style.display = "none";
+    };
+
     (async () => {
       try {
-        // Use prop if passed, fallback to URL
-        const slug =
-          slugProp ||
+        showLoading();
+
+        const effectiveSlug =
+          (slug && String(slug).trim()) ||
           window.location.pathname.split("/").filter(Boolean).pop() ||
           "";
 
-        if (!slug) {
+        if (!effectiveSlug) {
           window.location.replace("/works");
           return;
         }
 
-        // ✅ COOKIE gate (authoritative)
-        const statusRes = await fetch("/.netlify/functions/private-ui-status", {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        const status = await statusRes.json().catch(() => null);
-        if (!status?.unlocked) {
-          window.location.replace("/works?unlock=open");
-          return;
-        }
-
-        // ✅ Fetch hidden post (cookie required by function)
         const res = await fetch(
-          `/.netlify/functions/private-post?slug=${encodeURIComponent(slug)}`,
+          `/.netlify/functions/private-post?slug=${encodeURIComponent(effectiveSlug)}`,
           { credentials: "include", cache: "no-store" },
         );
 
         if (res.status === 401) {
-          window.location.replace("/works?unlock=open");
+          showLocked();
+          return; // user can click unlock link
+        }
+
+        if (res.status === 404 || res.status === 400) {
+          window.location.replace("/works");
           return;
         }
+
         if (!res.ok) {
-          window.location.replace("/works");
+          // treat as locked-ish
+          showLocked();
           return;
         }
 
         const data = await res.json();
 
-        // ✅ Normalize (supports both Sanity + Supabase return shapes)
         const normalized = {
           postType: "work",
           title: data.title ?? "Hidden Project",
@@ -71,18 +74,23 @@ export default function PrivatePostClient({ slug: slugProp }) {
           creditbox: Array.isArray(data.creditbox) ? data.creditbox : [],
         };
 
+        if (typeof window.__setNavPostTitle === "function") {
+          window.__setNavPostTitle(normalized.title);
+        }
+
+        hideLockedBox();
         if (alive) setPost(normalized);
       } catch {
-        window.location.replace("/works?unlock=open");
+        showLocked();
       }
     })();
 
     return () => {
       alive = false;
     };
-  }, [slugProp]);
+  }, [slug]);
 
-  if (!post) return <div className="private-loading"></div>;
+  if (!post) return null; // loading/locked UI handled by the Astro block
 
   const year = post.postDate ? new Date(post.postDate).getFullYear() : "";
 
